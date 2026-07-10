@@ -128,10 +128,15 @@ export default function Character() {
     // Weapon Animation Loop
     if (modelRef.current && modelRef.current.weapon) {
       if (PlayerAttack.cooldown[eid] > 0) {
-        modelRef.current.weapon.rotation.x -= 30 * delta
+        const attackPhase = (state.clock.elapsedTime * 20) % (Math.PI * 2)
+        modelRef.current.weapon.rotation.x = -Math.PI / 2 + Math.sin(attackPhase) * 2 // Slash!
+        modelRef.current.weapon.position.z = 1 + Math.sin(attackPhase) * 0.5 // Thrust
+        modelRef.current.weapon.scale.setScalar(1 + Math.sin(attackPhase) * 0.3) // Pulse
       } else {
         modelRef.current.weapon.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 4) * 0.1
+        modelRef.current.weapon.position.z = 0.5
         modelRef.current.weapon.rotation.x = 0
+        modelRef.current.weapon.scale.setScalar(1)
       }
     }
 

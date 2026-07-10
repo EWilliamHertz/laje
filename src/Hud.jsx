@@ -11,6 +11,7 @@ export default function Hud() {
   const xp = useStore(state => state.xp)
   const currency = useStore(state => state.currency)
   const toggleMap = useStore(state => state.toggleMap)
+  const toggleInventory = useStore(state => state.toggleInventory)
   
   const [activeKeys, setActiveKeys] = useState({})
   
@@ -56,7 +57,8 @@ export default function Hud() {
       </div>
 
       {/* Top Right Mini-Map / Buttons */}
-      <div className="top-right-hud">
+      <div className="top-right-hud" style={{ display: 'flex', gap: '0.5rem' }}>
+        <button className="map-btn" onClick={toggleInventory}>🎒 INVENTORY (I)</button>
         <button className="map-btn" onClick={toggleMap}>🌍 WORLD MAP (M)</button>
       </div>
 
@@ -150,10 +152,13 @@ export default function Hud() {
       
       {/* Bottom right hints */}
       <div style={{ position: 'absolute', bottom: '2rem', right: '2rem', display: 'flex', gap: '1rem' }}>
-        <div style={{ background: 'rgba(2, 6, 23, 0.8)', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white' }}>
+        <div className="glass-panel" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', fontFamily: 'Orbitron', fontWeight: 600 }}>
+          [I] INVENTORY
+        </div>
+        <div className="glass-panel" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', fontFamily: 'Orbitron', fontWeight: 600 }}>
           [M] MAP
         </div>
-        <div style={{ background: 'rgba(2, 6, 23, 0.8)', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white' }}>
+        <div className="glass-panel" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', fontFamily: 'Orbitron', fontWeight: 600 }}>
           [L] SKILLS
         </div>
       </div>

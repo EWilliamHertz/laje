@@ -17,12 +17,17 @@ export const useStore = create((set) => ({
   isSkillTreeOpen: false,
   unlockedSkills: [],
   hotbar: [null, null, null, null, null],
+  inventory: [],
+  isInventoryOpen: false,
   triggeredSkill: null,
   
   triggerSkill: (skillId) => set({ triggeredSkill: skillId }),
   clearTriggeredSkill: () => set({ triggeredSkill: null }),
 
   toggleSkillTree: () => set(state => ({ isSkillTreeOpen: !state.isSkillTreeOpen })),
+  toggleInventory: () => set(state => ({ isInventoryOpen: !state.isInventoryOpen })),
+  
+  addInventoryItem: (item) => set(state => ({ inventory: [...state.inventory, item] })),
   
   saveProgress: async () => {
     const state = get()

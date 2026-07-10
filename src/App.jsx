@@ -11,6 +11,7 @@ import Hud from './Hud'
 import WorldMap from './WorldMap'
 import SkillTree from './SkillTree'
 import Toolbar from './Toolbar'
+import Inventory from './Inventory'
 import Multiplayer from './Multiplayer'
 import { useStore } from './store'
 import './index.css'
@@ -19,6 +20,8 @@ import './login.css'
 export default function App() {
   const characterConfig = useStore(state => state.characterConfig)
   const toggleMap = useStore(state => state.toggleMap)
+  const toggleSkillTree = useStore(state => state.toggleSkillTree)
+  const toggleInventory = useStore(state => state.toggleInventory)
   const isLoggedIn = useStore(state => state.isLoggedIn)
 
   // Map M key to open world map
@@ -26,11 +29,12 @@ export default function App() {
     if (!characterConfig) return
     const handleKeyDown = (e) => {
       if (e.code === 'KeyM') toggleMap()
-      if (e.code === 'KeyL') useStore.getState().toggleSkillTree()
+      if (e.code === 'KeyL') toggleSkillTree()
+      if (e.code === 'KeyI') toggleInventory()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [characterConfig, toggleMap])
+  }, [characterConfig, toggleMap, toggleSkillTree, toggleInventory])
 
   return (
     <>
@@ -44,6 +48,7 @@ export default function App() {
             <Hud />
             <WorldMap />
             <SkillTree />
+            <Inventory />
             <Toolbar />
           </>
         )}

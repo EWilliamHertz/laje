@@ -168,6 +168,24 @@ export function combatSystem(world, delta, playerEid) {
             useStore.getState().addLoot(xpGained, currencyGained)
             useStore.getState().addFloatingText(eid, `+${xpGained} XP`, '#fef08a', ex, ez)
             useStore.getState().addFloatingText(eid, `+${currencyGained} Credits`, '#34d399', ex, ez)
+            
+            // Item Drop Logic
+            if (Math.random() > 0.8) {
+              const types = ['weapon', 'armor']
+              const rarities = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']
+              const rarityColors = ['#94a3b8', '#4ade80', '#3b82f6', '#a855f7', '#f59e0b']
+              const rIdx = Math.random() > 0.9 ? 4 : Math.random() > 0.7 ? 3 : Math.random() > 0.4 ? 2 : Math.random() > 0.1 ? 1 : 0
+              
+              const item = {
+                id: `item_${Math.random()}`,
+                name: `${rarities[rIdx]} ${types[Math.floor(Math.random() * types.length)]}`,
+                rarity: rarities[rIdx],
+                color: rarityColors[rIdx],
+                power: (rIdx + 1) * 10
+              }
+              useStore.getState().addInventoryItem(item)
+              useStore.getState().addFloatingText(`item_${Math.random()}`, `Found: ${item.name}`, item.color, ex, ez + 1)
+            }
           }
         }
       }
