@@ -49,12 +49,12 @@ export default function Character() {
     const newEid = addEntity(world)
     setEid(newEid)
     
-    addComponent(world, newEid, Position)
-    addComponent(world, newEid, Velocity)
-    addComponent(world, newEid, Rotation)
-    addComponent(world, newEid, PlayerControls)
-    addComponent(world, newEid, PlayerAttack)
-    addComponent(world, newEid, Health)
+    addComponent(world, Position, newEid)
+    addComponent(world, Velocity, newEid)
+    addComponent(world, Rotation, newEid)
+    addComponent(world, PlayerControls, newEid)
+    addComponent(world, PlayerAttack, newEid)
+    addComponent(world, Health, newEid)
     
     Position.x[newEid] = 0
     Position.y[newEid] = 0
