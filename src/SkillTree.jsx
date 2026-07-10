@@ -11,12 +11,16 @@ export default function SkillTree() {
   const toggleSkillTree = useStore(state => state.toggleSkillTree)
   const unlockSkill = useStore(state => state.unlockSkill)
   const unlockedSkills = useStore(state => state.unlockedSkills)
-  const currency = useStore(state => state.currency) // Using currency as 'Data-Shards'
+  const currency = useStore(state => state.currency)
+
+  const handleDragStart = (e, skillId) => {
+    e.dataTransfer.setData('skillId', skillId)
+  }
 
   if (!isSkillTreeOpen) return null
 
   return (
-    <div className="ui-screen" style={{ background: 'rgba(2, 6, 23, 0.95)', padding: '4rem', pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="ui-screen" style={{ background: 'rgba(2, 6, 23, 0.95)', padding: '4rem', pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflowY: 'auto' }}>
       <button 
         onClick={toggleSkillTree}
         style={{ position: 'absolute', top: '2rem', right: '2rem', background: 'none', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer' }}
@@ -35,6 +39,8 @@ export default function SkillTree() {
           return (
             <div 
               key={skill.id}
+              draggable={isUnlocked}
+              onDragStart={(e) => handleDragStart(e, skill.id)}
               style={{
                 background: isUnlocked ? 'rgba(96, 165, 250, 0.2)' : 'rgba(255,255,255,0.05)',
                 border: `2px solid ${isUnlocked ? '#60a5fa' : 'rgba(255,255,255,0.1)'}`,
@@ -42,7 +48,8 @@ export default function SkillTree() {
                 borderRadius: '1rem',
                 width: '300px',
                 textAlign: 'center',
-                transition: 'all 0.3s'
+                transition: 'all 0.3s',
+                cursor: isUnlocked ? 'grab' : 'default'
               }}
             >
               <h3 style={{ color: 'white', fontSize: '1.5rem', marginBottom: '1rem' }}>{skill.name}</h3>

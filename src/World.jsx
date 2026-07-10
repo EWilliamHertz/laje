@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useRef, useMemo } from 'react'
+import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { useStore } from './store'
-import { useTexture } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
 
 const areaConfigs = {
   cyber_forest: { floorColor: '#0f172a' },
@@ -11,6 +12,7 @@ const areaConfigs = {
 
 export default function World() {
   const currentArea = useStore(state => state.currentArea)
+  const setCurrentArea = useStore(state => state.setCurrentArea)
   
   const floorTex = useTexture('/floor.jpg')
   floorTex.wrapS = THREE.RepeatWrapping
@@ -18,6 +20,8 @@ export default function World() {
   floorTex.repeat.set(40, 40)
   
   const config = areaConfigs[currentArea] || areaConfigs.hub
+  const isForest = currentArea === 'cyber_forest'
+  const isSpire = currentArea === 'ruined_spire'
 
   const stones = useMemo(() => {
     const items = []
@@ -106,6 +110,19 @@ export default function World() {
           </mesh>
         </group>
       ))}
+      
+      {/* --- TELEPORTATION GATE --- */}
+      <group position={[15, 0, 15]}>
+        <mesh castShadow position={[0, 2, 0]}>
+          <boxGeometry args={[4, 4, 1]} />
+          <meshStandardMaterial color="#334155" metalness={0.8} />
+        </mesh>
+        <mesh position={[0, 2, 0.6]}>
+          <planeGeometry args={[3, 3]} />
+          <meshBasicMaterial color={isForest ? "#a855f7" : "#ef4444"} transparent opacity={0.8} />
+        </mesh>
+        <pointLight color={isForest ? "#a855f7" : "#ef4444"} intensity={2} distance={10} position={[0, 2, 1]} />
+      </group>
     </group>
   )
 }

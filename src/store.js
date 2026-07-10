@@ -16,19 +16,67 @@ export const useStore = create((set) => ({
   userProfile: null,
   isSkillTreeOpen: false,
   unlockedSkills: [],
+  hotbar: [null, null, null, null, null],
+  triggeredSkill: null,
   
-  toggleSkillTree: () => set(state => ({ isSkillTreeOpen: !state.isSkillTreeOpen })),
-  unlockSkill: (skillId, cost) => set(state => {
-    if (state.currency >= cost && !state.unlockedSkills.includes(skillId)) {
-      return { 
-        currency: state.currency - cost, 
-        unlockedSkills: [...state.unlockedSkills, skillId] 
-      }
-    }
-    return state
-  }),
+  triggerSkill: (skillId) => set({ triggeredSkill: skillId }),
+  clearTriggeredSkill: () => set({ triggeredSkill: null }),
 
-  login: (profile) => set({ isLoggedIn: true, userProfile: profile }),
+  toggleSkillTree: () => set(state => ({ isSkillTreeOpen: !state.isSkillTreeOpen })),
+  
+  saveProgress: async () => {
+    const state = get()
+    if (!state.userProfile) return
+    let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    baseUrl = baseUrl.trim()
+    if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`
+    baseUrl = baseUrl.replace(/\\/$/, '')
+    
+    fetch(`${baseUrl}/api/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: state.userProfile.id,
+        level: state.level,
+        xp: state.xp,
+        currency: state.currency,
+        unlockedSkills: state.unlockedSkills,
+        hotbar: state.hotbar
+      })
+    }).catch(console.error)
+  },
+
+  updateHotbar: (index, skillId) => {
+    set(state => {
+      const newHotbar = [...state.hotbar]
+      newHotbar[index] = skillId
+      return { hotbar: newHotbar }
+    })
+    get().saveProgress()
+  },
+
+  unlockSkill: (skillId, cost) => {
+    set(state => {
+      if (state.currency >= cost && !state.unlockedSkills.includes(skillId)) {
+        return { 
+          currency: state.currency - cost, 
+          unlockedSkills: [...state.unlockedSkills, skillId] 
+        }
+      }
+      return state
+    })
+    get().saveProgress()
+  },
+
+  login: (profile) => set({ 
+    isLoggedIn: true, 
+    userProfile: profile,
+    level: profile.level || 1,
+    xp: profile.xp || 0,
+    currency: profile.currency || 0,
+    unlockedSkills: profile.unlocked_skills ? (typeof profile.unlocked_skills === 'string' ? JSON.parse(profile.unlocked_skills) : profile.unlocked_skills) : [],
+    hotbar: profile.hotbar ? (typeof profile.hotbar === 'string' ? JSON.parse(profile.hotbar) : profile.hotbar) : [null, null, null, null, null]
+  }),
   setCharacterConfig: (config) => set({ characterConfig: config }),
   setHealth: (amount) => set({ health: amount }),
   updateHealth: (amount) => set((state) => ({ health: Math.min(state.maxHealth, Math.max(0, state.health + amount)) })),

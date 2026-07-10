@@ -101,6 +101,30 @@ export default function Character() {
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, charPos.z + 20, 0.1)
     state.camera.lookAt(charPos.x, 0, charPos.z)
     
+    // Hotbar Skills Check
+    const tSkill = useStore.getState().triggeredSkill
+    if (tSkill) {
+      if (tSkill === 'dash') PlayerAttack.action[eid] = 3
+      if (tSkill === 'cleave') PlayerAttack.action[eid] = 4
+      if (tSkill === 'shield') PlayerAttack.action[eid] = 5
+      useStore.getState().clearTriggeredSkill()
+    }
+    
+    // Gate Teleportation Check
+    // Gate is at [15, 0, 15]
+    if (Math.abs(charPos.x - 15) < 3 && Math.abs(charPos.z - 15) < 3) {
+      if (currentArea === 'cyber_forest') {
+        useStore.getState().setCurrentArea('ruined_spire')
+        // Bounce player back slightly so they don't instantly teleport back
+        Position.x[eid] = 0
+        Position.z[eid] = 0
+      } else if (currentArea === 'ruined_spire') {
+        useStore.getState().setCurrentArea('cyber_forest')
+        Position.x[eid] = 0
+        Position.z[eid] = 0
+      }
+    }
+
     // Weapon Animation Loop
     if (modelRef.current && modelRef.current.weapon) {
       if (PlayerAttack.cooldown[eid] > 0) {

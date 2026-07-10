@@ -82,6 +82,48 @@ export function enemyAISystem(world, playerEid) {
 export function combatSystem(world, delta, playerEid) {
   if (playerEid === null) return
 
+  const px = Position.x[playerEid]
+  const pz = Position.z[playerEid]
+  const pRot = Rotation.y[playerEid]
+  const ents = query(world, [Enemy, Position, Health])
+
+  if (PlayerAttack.action[playerEid] === 3 && PlayerAttack.cooldown[playerEid] <= 0) {
+    // Phase Dash: Teleport forward
+    Position.x[playerEid] += Math.sin(pRot) * 10
+    Position.z[playerEid] += Math.cos(pRot) * 10
+    PlayerAttack.cooldown[playerEid] = 1.0
+    PlayerAttack.action[playerEid] = 0
+    useStore.getState().addFloatingText("PHASE DASH", [px, 2, pz], "#a855f7")
+  }
+  
+  if (PlayerAttack.action[playerEid] === 4 && PlayerAttack.cooldown[playerEid] <= 0) {
+    // Energy Cleave: Massive AoE damage
+    for (let i = 0; i < ents.length; i++) {
+      const eid = ents[i]
+      const dx = Position.x[eid] - px
+      const dz = Position.z[eid] - pz
+      const dist = Math.sqrt(dx*dx + dz*dz)
+      if (dist < 8) {
+        Health.current[eid] -= 100
+        Velocity.x[eid] += dx * 5
+        Velocity.z[eid] += dz * 5
+        useStore.getState().addFloatingText("100 CRIT", [Position.x[eid], 2, Position.z[eid]], "#ef4444")
+      }
+    }
+    PlayerAttack.cooldown[playerEid] = 2.0
+    PlayerAttack.action[playerEid] = 0
+  }
+  
+  if (PlayerAttack.action[playerEid] === 5 && PlayerAttack.cooldown[playerEid] <= 0) {
+    // Aether Shield: Heal self
+    Health.current[playerEid] = Math.min(100, Health.current[playerEid] + 50)
+    PlayerAttack.cooldown[playerEid] = 3.0
+    PlayerAttack.action[playerEid] = 0
+    useStore.getState().addFloatingText("+50 HP", [px, 2, pz], "#22c55e")
+  }
+
+
+
   // Cooldown reduction
   if (PlayerAttack.cooldown[playerEid] > 0) {
     PlayerAttack.cooldown[playerEid] -= delta

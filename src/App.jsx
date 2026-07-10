@@ -10,6 +10,7 @@ import Login from './Login'
 import Hud from './Hud'
 import WorldMap from './WorldMap'
 import SkillTree from './SkillTree'
+import Toolbar from './Toolbar'
 import Multiplayer from './Multiplayer'
 import { useStore } from './store'
 import './index.css'
@@ -43,6 +44,7 @@ export default function App() {
             <Hud />
             <WorldMap />
             <SkillTree />
+            <Toolbar />
           </>
         )}
       </div>

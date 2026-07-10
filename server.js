@@ -58,9 +58,14 @@ async function initDB() {
         password VARCHAR(255) NOT NULL,
         level INTEGER DEFAULT 1,
         xp INTEGER DEFAULT 0,
-        currency INTEGER DEFAULT 0
+        currency INTEGER DEFAULT 0,
+        unlocked_skills TEXT DEFAULT '[]',
+        hotbar TEXT DEFAULT '[]'
       );
     `)
+    // Alter table just in case the table already exists from earlier
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS unlocked_skills TEXT DEFAULT '[]';`)
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS hotbar TEXT DEFAULT '[]';`)
     console.log('Database initialized successfully')
   } catch (err) {
     console.error('Error initializing DB:', err)
@@ -75,7 +80,7 @@ app.post('/api/register', async (req, res) => {
     const checkRes = await pool.query('SELECT id FROM users WHERE username = $1', [username])
     if (checkRes.rows.length > 0) return res.status(400).json({ error: 'Username taken' })
     const insertRes = await pool.query(
-      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, level, xp, currency',
+      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, level, xp, currency, unlocked_skills, hotbar',
       [username, password]
     )
     res.json(insertRes.rows[0])
@@ -91,8 +96,26 @@ app.post('/api/login', async (req, res) => {
     if (checkRes.rows.length === 0) return res.status(401).json({ error: 'Invalid' })
     const user = checkRes.rows[0]
     if (user.password !== password) return res.status(401).json({ error: 'Invalid' })
-    res.json({ id: user.id, username: user.username, level: user.level, xp: user.xp, currency: user.currency })
+    res.json({ 
+      id: user.id, username: user.username, level: user.level, xp: user.xp, currency: user.currency,
+      unlocked_skills: user.unlocked_skills, hotbar: user.hotbar
+    })
   } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+app.post('/api/save', async (req, res) => {
+  const { id, level, xp, currency, unlockedSkills, hotbar } = req.body
+  if (!id) return res.status(400).json({ error: 'Missing ID' })
+  try {
+    await pool.query(
+      'UPDATE users SET level = $1, xp = $2, currency = $3, unlocked_skills = $4, hotbar = $5 WHERE id = $6',
+      [level, xp, currency, JSON.stringify(unlockedSkills || []), JSON.stringify(hotbar || []), id]
+    )
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Save error:', err)
     res.status(500).json({ error: 'Server error' })
   }
 })

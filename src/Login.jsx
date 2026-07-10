@@ -38,12 +38,12 @@ export default function Login() {
 
       const data = await response.json()
 
-      if (!response.ok) {
+      if (response.ok) {
+        // Success! Log the user into the game state with all their progress
+        login(data)
+      } else {
         throw new Error(data.error || 'Authentication failed')
       }
-
-      // Success! Log the user into the game state
-      login({ username: data.username, id: data.id })
     } catch (err) {
       setError(err.message)
     } finally {
