@@ -28,11 +28,11 @@ export default function Enemies() {
     
     for (let i = 0; i < count; i++) {
       const eid = addEntity(world)
-      addComponent(world, Position, eid)
-      addComponent(world, Velocity, eid)
-      addComponent(world, Rotation, eid)
-      addComponent(world, Enemy, eid)
-      addComponent(world, Health, eid)
+      addComponent(world, eid, Position)
+      addComponent(world, eid, Velocity)
+      addComponent(world, eid, Rotation)
+      addComponent(world, eid, Enemy)
+      addComponent(world, eid, Health)
       
       // Random position outside immediate center
       const angle = Math.random() * Math.PI * 2
