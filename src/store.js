@@ -14,7 +14,20 @@ export const useStore = create((set) => ({
   floatingTexts: [],
   isLoggedIn: false,
   userProfile: null,
+  isSkillTreeOpen: false,
+  unlockedSkills: [],
   
+  toggleSkillTree: () => set(state => ({ isSkillTreeOpen: !state.isSkillTreeOpen })),
+  unlockSkill: (skillId, cost) => set(state => {
+    if (state.currency >= cost && !state.unlockedSkills.includes(skillId)) {
+      return { 
+        currency: state.currency - cost, 
+        unlockedSkills: [...state.unlockedSkills, skillId] 
+      }
+    }
+    return state
+  }),
+
   login: (profile) => set({ isLoggedIn: true, userProfile: profile }),
   setCharacterConfig: (config) => set({ characterConfig: config }),
   setHealth: (amount) => set({ health: amount }),

@@ -9,6 +9,7 @@ import CharacterSelect from './CharacterSelect'
 import Login from './Login'
 import Hud from './Hud'
 import WorldMap from './WorldMap'
+import SkillTree from './SkillTree'
 import { useStore } from './store'
 import './index.css'
 import './login.css'
@@ -23,6 +24,7 @@ export default function App() {
     if (!characterConfig) return
     const handleKeyDown = (e) => {
       if (e.code === 'KeyM') toggleMap()
+      if (e.code === 'KeyK') useStore.getState().toggleSkillTree()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
@@ -39,6 +41,7 @@ export default function App() {
           <>
             <Hud />
             <WorldMap />
+            <SkillTree />
           </>
         )}
       </div>

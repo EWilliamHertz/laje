@@ -92,6 +92,16 @@ export default function Hud() {
           <div className="orb-value" style={{ color: resourceColor }}>{resource} / {maxResource}</div>
         </div>
       </div>
+      
+      {/* Bottom right hints */}
+      <div style={{ position: 'absolute', bottom: '2rem', right: '2rem', display: 'flex', gap: '1rem' }}>
+        <div style={{ background: 'rgba(2, 6, 23, 0.8)', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white' }}>
+          [M] MAP
+        </div>
+        <div style={{ background: 'rgba(2, 6, 23, 0.8)', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white' }}>
+          [K] SKILLS
+        </div>
+      </div>
     </>
   )
 }
