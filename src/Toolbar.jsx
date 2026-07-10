@@ -43,7 +43,7 @@ export default function Toolbar() {
       transform: 'translateY(-50%)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '1rem',
+      gap: '1.2rem',
       pointerEvents: 'auto'
     }}>
       {hotbar.map((skillId, index) => (
@@ -51,35 +51,40 @@ export default function Toolbar() {
           key={index}
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, index)}
+          className="glass-panel"
           style={{
-            width: '60px',
-            height: '60px',
-            background: 'rgba(15, 23, 42, 0.8)',
-            border: '2px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '0.5rem',
+            width: '64px',
+            height: '64px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '2rem',
             color: 'white',
             position: 'relative',
-            boxShadow: skillId ? '0 0 15px rgba(96, 165, 250, 0.5)' : 'none'
+            boxShadow: skillId ? '0 0 20px rgba(96, 165, 250, 0.4)' : 'none',
+            border: skillId ? '2px solid rgba(96, 165, 250, 0.8)' : '1px solid rgba(255,255,255,0.1)',
+            clipPath: 'polygon(15% 0, 100% 0, 85% 100%, 0 100%)',
+            transition: 'all 0.3s ease'
           }}
         >
-          {skillId ? SKILL_ICONS[skillId] : ''}
+          <div style={{ transform: 'skewX(10deg)' }}>
+            {skillId ? SKILL_ICONS[skillId] : ''}
+          </div>
           <div style={{
             position: 'absolute',
-            bottom: '-0.5rem',
-            right: '-0.5rem',
-            background: '#3b82f6',
-            borderRadius: '50%',
-            width: '20px',
-            height: '20px',
+            bottom: '0',
+            right: '0',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+            width: '24px',
+            height: '24px',
             fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 'bold'
+            fontWeight: '900',
+            fontFamily: 'Orbitron',
+            boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+            transform: 'skewX(10deg)'
           }}>
             {index + 1}
           </div>

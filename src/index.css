@@ -1,10 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;800&display=swap');
+
+:root {
+  --primary-glow: #60a5fa;
+  --resource-glow: #a855f7;
+  --bg-color: #020617;
+  --glass-bg: rgba(15, 23, 42, 0.6);
+}
+
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  background-color: #0f172a;
-  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-color);
   color: white;
+  font-family: 'Orbitron', 'Inter', sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.sci-fi-border {
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
 }
 
 #root {
@@ -203,7 +225,7 @@ body {
 }
 
 .orb-label, .orb-value {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Orbitron', sans-serif;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;

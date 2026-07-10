@@ -60,36 +60,91 @@ export default function Hud() {
         <button className="map-btn" onClick={toggleMap}>🌍 WORLD MAP (M)</button>
       </div>
 
-      <div className="hud-container">
-        {/* Health Indicator (Left) */}
-        <div className="orb-container left-orb">
-          <div className="orb-label" style={{ color: '#fca5a5' }}>Health</div>
-          <div className="orb health-orb">
-            <div className="orb-fill" style={{ height: `${healthPercent}%`, backgroundColor: '#dc2626' }}></div>
-            <div className="orb-glass"></div>
-            <div className="orb-grid"></div>
+      <div className="hud-container" style={{ gap: '4rem', paddingBottom: '1rem' }}>
+        {/* Futuristic Health Bar (Left) */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem', width: '300px' }}>
+          <div className="orb-label" style={{ color: '#fca5a5', paddingLeft: '1rem' }}>HEALTH</div>
+          <div className="glass-panel" style={{
+            width: '100%',
+            height: '32px',
+            position: 'relative',
+            clipPath: 'polygon(0 0, 100% 0, 95% 100%, 5% 100%)',
+            border: '1px solid rgba(220, 38, 38, 0.4)',
+            boxShadow: '0 0 20px rgba(220, 38, 38, 0.2)'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0, left: 0,
+              width: `${healthPercent}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, #b91c1c, #ef4444)',
+              transition: 'width 0.3s ease-out',
+              boxShadow: '0 0 20px rgba(239, 68, 68, 0.8)'
+            }} />
+            <div style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+              opacity: 0.5
+            }} />
+            <span style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              fontFamily: 'Orbitron',
+              fontWeight: 900,
+              color: 'white',
+              textShadow: '0 0 5px rgba(0,0,0,1)'
+            }}>{Math.floor(health)} / {maxHealth}</span>
           </div>
-          <div className="orb-value" style={{ color: '#fca5a5' }}>{health} / {maxHealth}</div>
         </div>
 
         {/* Action Bar Placeholder (Center) */}
         <div className="action-bar-placeholder">
           <div className={`action-slot ${activeKeys['KeyJ'] ? 'active' : ''}`}>J</div>
           <div className={`action-slot ${activeKeys['KeyK'] ? 'active' : ''}`}>K</div>
-          <div className={`action-slot ${activeKeys['KeyL'] ? 'active' : ''}`}>L</div>
-          <div className={`action-slot ${activeKeys['Semicolon'] ? 'active' : ''}`}>;</div>
-          <div className={`action-slot ultimate ${activeKeys['KeyU'] ? 'active' : ''}`}>U</div>
         </div>
 
-        {/* Resource Indicator (Right) */}
-        <div className="orb-container right-orb">
-          <div className="orb-label" style={{ color: resourceColor }}>{resourceName}</div>
-          <div className="orb resource-orb" style={{ '--resource-glow': resourceColor }}>
-            <div className="orb-fill" style={{ height: `${resourcePercent}%`, backgroundColor: resourceColor }}></div>
-            <div className="orb-glass"></div>
-            <div className="orb-grid"></div>
+        {/* Futuristic Resource Bar (Right) */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', width: '300px' }}>
+          <div className="orb-label" style={{ color: resourceColor, paddingRight: '1rem' }}>{resourceName}</div>
+          <div className="glass-panel" style={{
+            width: '100%',
+            height: '32px',
+            position: 'relative',
+            clipPath: 'polygon(5% 0, 95% 0, 100% 100%, 0 100%)',
+            border: `1px solid ${resourceColor}`,
+            boxShadow: `0 0 20px ${resourceColor}40`
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0, right: 0,
+              width: `${resourcePercent}%`,
+              height: '100%',
+              background: `linear-gradient(270deg, ${resourceColor}, ${resourceColor}88)`,
+              transition: 'width 0.3s ease-out',
+              boxShadow: `0 0 20px ${resourceColor}`
+            }} />
+            <div style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+              opacity: 0.5
+            }} />
+            <span style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              fontFamily: 'Orbitron',
+              fontWeight: 900,
+              color: 'white',
+              textShadow: '0 0 5px rgba(0,0,0,1)'
+            }}>{Math.floor(resource)} / {maxResource}</span>
           </div>
-          <div className="orb-value" style={{ color: resourceColor }}>{resource} / {maxResource}</div>
         </div>
       </div>
       

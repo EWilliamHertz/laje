@@ -30,7 +30,7 @@ export const useStore = create((set) => ({
     let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
     baseUrl = baseUrl.trim()
     if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`
-    baseUrl = baseUrl.replace(/\\/$/, '')
+    baseUrl = baseUrl.replace(/\/$/, '')
     
     fetch(`${baseUrl}/api/save`, {
       method: 'POST',
