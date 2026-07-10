@@ -23,9 +23,14 @@ export default function Login() {
     try {
       // Send request to our Node.js backend
       const endpoint = activeTab === 'register' ? '/api/register' : '/api/login'
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
       
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      // Clean up common user input errors for the env variable!
+      baseUrl = baseUrl.trim()
+      if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`
+      baseUrl = baseUrl.replace(/\/$/, '') // Remove trailing slash
+      
+      const response = await fetch(`${baseUrl}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
