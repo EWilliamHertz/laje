@@ -43,6 +43,7 @@ export default function Character() {
   const setHealth = useStore(state => state.setHealth)
   const currentArea = useStore(state => state.currentArea)
   const groupRef = useRef()
+  const modelRef = useRef()
   const [eid, setEid] = useState(null)
   
   useEffect(() => {
@@ -100,6 +101,16 @@ export default function Character() {
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, charPos.z + 20, 0.1)
     state.camera.lookAt(charPos.x, 0, charPos.z)
     
+    // Weapon Animation Loop
+    if (modelRef.current && modelRef.current.weapon) {
+      if (PlayerAttack.cooldown[eid] > 0) {
+        modelRef.current.weapon.rotation.x -= 30 * delta
+      } else {
+        modelRef.current.weapon.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 4) * 0.1
+        modelRef.current.weapon.rotation.x = 0
+      }
+    }
+
     // Multiplayer Sync (20 ticks per second)
     if (window.frameCount === undefined) window.frameCount = 0
     window.frameCount++
@@ -124,9 +135,9 @@ export default function Character() {
       
       {/* --- Advanced Procedural 3D Model --- */}
       <CharacterModel 
+        ref={modelRef}
         charClass={config.class} 
         energyColor={energyColor} 
-        isAttacking={PlayerAttack.cooldown[eid] > 0} 
       />
 
       {/* Target/Selection Ring */}

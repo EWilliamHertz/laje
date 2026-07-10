@@ -1,32 +1,25 @@
-import { useRef } from 'react'
+import { useRef, forwardRef, useImperativeHandle } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-export default function CharacterModel({ charClass, energyColor, isPreview = false, isAttacking = false }) {
+const CharacterModel = forwardRef(({ charClass, energyColor, isPreview = false }, ref) => {
   const groupRef = useRef()
   const weaponRef = useRef()
+  
+  useImperativeHandle(ref, () => ({
+    group: groupRef.current,
+    weapon: weaponRef.current
+  }))
   
   const isMage = charClass === 'mage'
   const isWarrior = charClass === 'warrior'
   const isRogue = charClass === 'rogue'
 
   useFrame((state, delta) => {
-    if (!weaponRef.current) return
-
-    if (isPreview) {
-      // Idle rotate for preview screen
-      if (groupRef.current) groupRef.current.rotation.y = state.clock.elapsedTime * 0.5
-      weaponRef.current.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 4) * 0.1
-    } else {
-      if (isAttacking) {
-        // Attacking animation! Spin the weapon incredibly fast
-        weaponRef.current.rotation.x -= 30 * delta
-      } else {
-        // Idle hover
-        weaponRef.current.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 4) * 0.1
-        weaponRef.current.rotation.x = 0
-      }
-    }
+    if (!weaponRef.current || !isPreview) return
+    // Idle rotate for preview screen only
+    if (groupRef.current) groupRef.current.rotation.y = state.clock.elapsedTime * 0.5
+    weaponRef.current.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 4) * 0.1
   })
 
   return (
@@ -109,4 +102,6 @@ export default function CharacterModel({ charClass, energyColor, isPreview = fal
       </group>
     </group>
   )
-}
+})
+
+export default CharacterModel

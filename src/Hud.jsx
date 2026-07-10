@@ -99,7 +99,7 @@ export default function Hud() {
           [M] MAP
         </div>
         <div style={{ background: 'rgba(2, 6, 23, 0.8)', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white' }}>
-          [K] SKILLS
+          [L] SKILLS
         </div>
       </div>
     </>

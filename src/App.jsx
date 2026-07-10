@@ -25,7 +25,7 @@ export default function App() {
     if (!characterConfig) return
     const handleKeyDown = (e) => {
       if (e.code === 'KeyM') toggleMap()
-      if (e.code === 'KeyK') useStore.getState().toggleSkillTree()
+      if (e.code === 'KeyL') useStore.getState().toggleSkillTree()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
