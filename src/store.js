@@ -21,6 +21,7 @@ export const useStore = create((set) => ({
   isInventoryOpen: false,
   equipped: { weapon: null, armor: null },
   friends: [],
+  isMerchantOpen: false,
   triggeredSkill: null,
   
   triggerSkill: (skillId) => set({ triggeredSkill: skillId }),
@@ -49,6 +50,31 @@ export const useStore = create((set) => ({
   addFriend: (username) => set(state => {
     if (state.friends.includes(username)) return {}
     return { friends: [...state.friends, username] }
+  }),
+  
+  toggleMerchant: () => set(state => ({ isMerchantOpen: !state.isMerchantOpen })),
+  
+  buyItem: (item, cost) => set(state => {
+    if (state.currency >= cost) {
+      return { currency: state.currency - cost, inventory: [...state.inventory, item] }
+    }
+    return {}
+  }),
+  
+  sellItem: (item) => set(state => {
+    // Unequip if it's equipped
+    let newEquipped = { ...state.equipped }
+    const isWpn = item.id.includes('weapon')
+    const type = isWpn ? 'weapon' : 'armor'
+    if (newEquipped[type]?.id === item.id) {
+      newEquipped[type] = null
+    }
+    
+    return { 
+      inventory: state.inventory.filter(i => i.id !== item.id),
+      equipped: newEquipped,
+      currency: state.currency + (item.power * 2) 
+    }
   }),
   
   saveProgress: async () => {

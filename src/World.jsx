@@ -1,6 +1,7 @@
 import { useRef, useMemo } from 'react'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import { Billboard, Text } from '@react-three/drei'
 import { useStore } from './store'
 import { useFrame } from '@react-three/fiber'
 
@@ -122,6 +123,24 @@ export default function World() {
           <meshBasicMaterial color={isForest ? "#a855f7" : "#ef4444"} transparent opacity={0.8} />
         </mesh>
         <pointLight color={isForest ? "#a855f7" : "#ef4444"} intensity={2} distance={10} position={[0, 2, 1]} />
+      </group>
+      
+      {/* --- MERCHANT NPC --- */}
+      <group position={[-10, 0.5, 5]} 
+        onContextMenu={(e) => { e.stopPropagation(); useStore.getState().toggleMerchant() }}
+        onPointerOver={() => document.body.style.cursor = 'pointer'}
+        onPointerOut={() => document.body.style.cursor = 'auto'}
+      >
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[1.5, 2, 1.5]} />
+          <meshStandardMaterial color="#f59e0b" emissive="#f59e0b" emissiveIntensity={0.5} />
+        </mesh>
+        <Billboard position={[0, 2, 0]}>
+          <Text fontSize={0.5} color="#fcd34d" outlineWidth={0.05} outlineColor="black">
+            [RIGHT CLICK]
+            BLACK MARKET
+          </Text>
+        </Billboard>
       </group>
     </group>
   )
