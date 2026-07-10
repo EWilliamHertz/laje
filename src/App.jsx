@@ -12,6 +12,7 @@ import WorldMap from './WorldMap'
 import SkillTree from './SkillTree'
 import Toolbar from './Toolbar'
 import Inventory from './Inventory'
+import FriendsList from './FriendsList'
 import Multiplayer from './Multiplayer'
 import { useStore } from './store'
 import './index.css'
@@ -49,6 +50,7 @@ export default function App() {
             <WorldMap />
             <SkillTree />
             <Inventory />
+            <FriendsList />
             <Toolbar />
           </>
         )}

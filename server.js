@@ -54,19 +54,23 @@ async function initDB() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        username VARCHAR(255) UNIQUE NOT NULL,
+        username VARCHAR(50) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         level INTEGER DEFAULT 1,
         xp INTEGER DEFAULT 0,
         currency INTEGER DEFAULT 0,
-        unlocked_skills TEXT DEFAULT '[]',
-        hotbar TEXT DEFAULT '[]'
-      );
+        unlocked_skills JSONB DEFAULT '[]'::jsonb,
+        hotbar JSONB DEFAULT '[null, null, null, null, null]'::jsonb,
+        inventory JSONB DEFAULT '[]'::jsonb,
+        equipped JSONB DEFAULT '{"weapon": null, "armor": null}'::jsonb,
+        friends JSONB DEFAULT '[]'::jsonb
+      )
     `)
-    // Alter table just in case the table already exists from earlier
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS unlocked_skills TEXT DEFAULT '[]';`)
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS hotbar TEXT DEFAULT '[]';`)
-    console.log('Database initialized successfully')
+    // Run alters to ensure columns exist for older rows
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS inventory JSONB DEFAULT '[]'::jsonb`)
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped JSONB DEFAULT '{"weapon": null, "armor": null}'::jsonb`)
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS friends JSONB DEFAULT '[]'::jsonb`)
+    console.log('Database schema ensured.')
   } catch (err) {
     console.error('Error initializing DB:', err)
   }
@@ -80,7 +84,7 @@ app.post('/api/register', async (req, res) => {
     const checkRes = await pool.query('SELECT id FROM users WHERE username = $1', [username])
     if (checkRes.rows.length > 0) return res.status(400).json({ error: 'Username taken' })
     const insertRes = await pool.query(
-      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, level, xp, currency, unlocked_skills, hotbar',
+      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, level, xp, currency, unlocked_skills, hotbar, inventory, equipped, friends',
       [username, password]
     )
     res.json(insertRes.rows[0])
@@ -98,7 +102,7 @@ app.post('/api/login', async (req, res) => {
     if (user.password !== password) return res.status(401).json({ error: 'Invalid' })
     res.json({ 
       id: user.id, username: user.username, level: user.level, xp: user.xp, currency: user.currency,
-      unlocked_skills: user.unlocked_skills, hotbar: user.hotbar
+      unlocked_skills: user.unlocked_skills, hotbar: user.hotbar, inventory: user.inventory, equipped: user.equipped, friends: user.friends
     })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -106,12 +110,22 @@ app.post('/api/login', async (req, res) => {
 })
 
 app.post('/api/save', async (req, res) => {
-  const { id, level, xp, currency, unlockedSkills, hotbar } = req.body
+  const { id, level, xp, currency, unlockedSkills, hotbar, inventory, equipped, friends } = req.body
   if (!id) return res.status(400).json({ error: 'Missing ID' })
   try {
     await pool.query(
-      'UPDATE users SET level = $1, xp = $2, currency = $3, unlocked_skills = $4, hotbar = $5 WHERE id = $6',
-      [level, xp, currency, JSON.stringify(unlockedSkills || []), JSON.stringify(hotbar || []), id]
+      'UPDATE users SET level = $1, xp = $2, currency = $3, unlocked_skills = $4, hotbar = $5, inventory = $6, equipped = $7, friends = $8 WHERE id = $9',
+      [
+        level, 
+        xp, 
+        currency, 
+        JSON.stringify(unlockedSkills || []), 
+        JSON.stringify(hotbar || [null, null, null, null, null]), 
+        JSON.stringify(inventory || []),
+        JSON.stringify(equipped || {weapon: null, armor: null}),
+        JSON.stringify(friends || []),
+        id
+      ]
     )
     res.json({ success: true })
   } catch (err) {

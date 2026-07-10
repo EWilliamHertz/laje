@@ -19,6 +19,8 @@ export const useStore = create((set) => ({
   hotbar: [null, null, null, null, null],
   inventory: [],
   isInventoryOpen: false,
+  equipped: { weapon: null, armor: null },
+  friends: [],
   triggeredSkill: null,
   
   triggerSkill: (skillId) => set({ triggeredSkill: skillId }),
@@ -28,6 +30,26 @@ export const useStore = create((set) => ({
   toggleInventory: () => set(state => ({ isInventoryOpen: !state.isInventoryOpen })),
   
   addInventoryItem: (item) => set(state => ({ inventory: [...state.inventory, item] })),
+  
+  equipItem: (item) => set(state => {
+    const isWpn = item.id.includes('weapon')
+    const type = isWpn ? 'weapon' : 'armor'
+    const currentlyEquipped = state.equipped[type]
+    
+    // Remove from inventory
+    const newInventory = state.inventory.filter(i => i.id !== item.id)
+    if (currentlyEquipped) newInventory.push(currentlyEquipped) // Return old item to inventory
+    
+    return {
+      inventory: newInventory,
+      equipped: { ...state.equipped, [type]: item }
+    }
+  }),
+
+  addFriend: (username) => set(state => {
+    if (state.friends.includes(username)) return {}
+    return { friends: [...state.friends, username] }
+  }),
   
   saveProgress: async () => {
     const state = get()
@@ -46,7 +68,10 @@ export const useStore = create((set) => ({
         xp: state.xp,
         currency: state.currency,
         unlockedSkills: state.unlockedSkills,
-        hotbar: state.hotbar
+        hotbar: state.hotbar,
+        inventory: state.inventory,
+        equipped: state.equipped,
+        friends: state.friends
       })
     }).catch(console.error)
   },
@@ -80,7 +105,10 @@ export const useStore = create((set) => ({
     xp: profile.xp || 0,
     currency: profile.currency || 0,
     unlockedSkills: profile.unlocked_skills ? (typeof profile.unlocked_skills === 'string' ? JSON.parse(profile.unlocked_skills) : profile.unlocked_skills) : [],
-    hotbar: profile.hotbar ? (typeof profile.hotbar === 'string' ? JSON.parse(profile.hotbar) : profile.hotbar) : [null, null, null, null, null]
+    hotbar: profile.hotbar ? (typeof profile.hotbar === 'string' ? JSON.parse(profile.hotbar) : profile.hotbar) : [null, null, null, null, null],
+    inventory: profile.inventory ? (typeof profile.inventory === 'string' ? JSON.parse(profile.inventory) : profile.inventory) : [],
+    equipped: profile.equipped ? (typeof profile.equipped === 'string' ? JSON.parse(profile.equipped) : profile.equipped) : { weapon: null, armor: null },
+    friends: profile.friends ? (typeof profile.friends === 'string' ? JSON.parse(profile.friends) : profile.friends) : []
   }),
   setCharacterConfig: (config) => set({ characterConfig: config }),
   setHealth: (amount) => set({ health: amount }),

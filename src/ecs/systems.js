@@ -158,7 +158,8 @@ export function combatSystem(world, delta, playerEid) {
         
         // Widen cone to 180 degrees (PI/2 rads on either side) to make hitting much easier!
         if (Math.abs(diff) < Math.PI / 2) {
-          Health.current[eid] -= 35 // Now takes 3 hits to kill!
+          const wpnPower = useStore.getState().equipped.weapon?.power || 0
+          Health.current[eid] -= (35 + wpnPower)
           
           if (Health.current[eid] <= 0) {
             // Enemy Died!

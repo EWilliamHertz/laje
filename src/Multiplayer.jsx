@@ -84,7 +84,16 @@ function OtherPlayer({ player }) {
   })
 
   return (
-    <group ref={groupRef} position={player.position || [0, 0, 0]}>
+    <group 
+      ref={groupRef} 
+      position={player.position || [0, 0, 0]}
+      onContextMenu={(e) => {
+        e.stopPropagation()
+        useStore.getState().addFriend(player.username)
+      }}
+      onPointerOver={() => document.body.style.cursor = 'pointer'}
+      onPointerOut={() => document.body.style.cursor = 'auto'}
+    >
       <CharacterModel 
         charClass={player.class} 
         energyColor={energyColor} 
