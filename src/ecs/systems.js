@@ -93,7 +93,7 @@ export function combatSystem(world, delta, playerEid) {
     Position.z[playerEid] += Math.cos(pRot) * 10
     PlayerAttack.cooldown[playerEid] = 1.0
     PlayerAttack.action[playerEid] = 0
-    useStore.getState().addFloatingText("PHASE DASH", [px, 2, pz], "#a855f7")
+    useStore.getState().addFloatingText(playerEid, "PHASE DASH", "#a855f7", px, pz)
   }
   
   if (PlayerAttack.action[playerEid] === 4 && PlayerAttack.cooldown[playerEid] <= 0) {
@@ -107,7 +107,7 @@ export function combatSystem(world, delta, playerEid) {
         Health.current[eid] -= 100
         Velocity.x[eid] += dx * 5
         Velocity.z[eid] += dz * 5
-        useStore.getState().addFloatingText("100 CRIT", [Position.x[eid], 2, Position.z[eid]], "#ef4444")
+        useStore.getState().addFloatingText(eid, "100 CRIT", "#ef4444", Position.x[eid], Position.z[eid])
       }
     }
     PlayerAttack.cooldown[playerEid] = 2.0
@@ -119,7 +119,7 @@ export function combatSystem(world, delta, playerEid) {
     Health.current[playerEid] = Math.min(100, Health.current[playerEid] + 50)
     PlayerAttack.cooldown[playerEid] = 3.0
     PlayerAttack.action[playerEid] = 0
-    useStore.getState().addFloatingText("+50 HP", [px, 2, pz], "#22c55e")
+    useStore.getState().addFloatingText(playerEid, "+50 HP", "#22c55e", px, pz)
   }
 
 
@@ -166,8 +166,8 @@ export function combatSystem(world, delta, playerEid) {
             const currencyGained = 5 + Math.floor(Math.random() * 5)
             
             useStore.getState().addLoot(xpGained, currencyGained)
-            useStore.getState().addFloatingText(`+${xpGained} XP`, [ex, 2, ez], '#fef08a')
-            useStore.getState().addFloatingText(`+${currencyGained} Credits`, [ex, 2.5, ez], '#34d399')
+            useStore.getState().addFloatingText(eid, `+${xpGained} XP`, '#fef08a', ex, ez)
+            useStore.getState().addFloatingText(eid, `+${currencyGained} Credits`, '#34d399', ex, ez)
           }
         }
       }

@@ -7,8 +7,8 @@ const CharacterModel = forwardRef(({ charClass, energyColor, isPreview = false }
   const weaponRef = useRef()
   
   useImperativeHandle(ref, () => ({
-    group: groupRef.current,
-    weapon: weaponRef.current
+    get group() { return groupRef.current },
+    get weapon() { return weaponRef.current }
   }))
   
   const isMage = charClass === 'mage'
