@@ -100,18 +100,6 @@ export default function Character() {
     state.camera.lookAt(charPos.x, charPos.y, charPos.z)
 
     if (state.controls) state.controls.target.copy(charPos)
-
-    // Animate weapon hover/spin
-    if (weaponRef.current) {
-      if (PlayerAttack.cooldown[eid] > 0) {
-        // Attacking animation! Spin the weapon incredibly fast
-        weaponRef.current.rotation.x -= 30 * delta
-      } else {
-        // Idle hover
-        weaponRef.current.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 4) * 0.1
-        weaponRef.current.rotation.x = 0
-      }
-    }
   })
 
   if (!config || eid === null) return null
