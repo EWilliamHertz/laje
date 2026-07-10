@@ -4,8 +4,8 @@ import { useStore } from './store'
 export default function Merchant() {
   const isMerchantOpen = useStore(state => state.isMerchantOpen)
   const toggleMerchant = useStore(state => state.toggleMerchant)
-  const inventory = useStore(state => state.inventory)
-  const currency = useStore(state => state.currency)
+  const inventory = useStore(state => state.inventory) || []
+  const currency = useStore(state => state.currency) || 0
   const buyItem = useStore(state => state.buyItem)
   const sellItem = useStore(state => state.sellItem)
   

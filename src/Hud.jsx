@@ -149,8 +149,8 @@ export default function Hud() {
         </div>
       </div>
       
-      {/* Bottom right hints */}
-      <div style={{ position: 'absolute', bottom: '2rem', right: '2rem', display: 'flex', gap: '1rem' }}>
+      {/* Bottom left hints */}
+      <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', display: 'flex', gap: '1rem' }}>
         <div className="glass-panel" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', fontFamily: 'Orbitron', fontWeight: 600 }}>
           [I] INVENTORY
         </div>
@@ -158,7 +158,7 @@ export default function Hud() {
           [M] MAP
         </div>
         <div className="glass-panel" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', fontFamily: 'Orbitron', fontWeight: 600 }}>
-          [L] SKILLS
+          [K] SKILLS
         </div>
       </div>
     </>

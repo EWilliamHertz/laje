@@ -3,8 +3,8 @@ import { useStore } from './store'
 export default function Inventory() {
   const isInventoryOpen = useStore(state => state.isInventoryOpen)
   const toggleInventory = useStore(state => state.toggleInventory)
-  const inventory = useStore(state => state.inventory)
-  const equipped = useStore(state => state.equipped)
+  const inventory = useStore(state => state.inventory) || []
+  const equipped = useStore(state => state.equipped) || { weapon: null, armor: null }
   const equipItem = useStore(state => state.equipItem)
 
   if (!isInventoryOpen) return null

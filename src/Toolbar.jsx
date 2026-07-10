@@ -8,8 +8,9 @@ const SKILL_ICONS = {
 }
 
 export default function Toolbar() {
-  const hotbar = useStore(state => state.hotbar)
+  const hotbar = useStore(state => state.hotbar) || [null, null, null, null, null]
   const updateHotbar = useStore(state => state.updateHotbar)
+  const triggerSkill = useStore(state => state.triggerSkill)
   
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -18,7 +19,7 @@ export default function Toolbar() {
         const skill = hotbar[index]
         if (skill) {
           // Trigger skill!
-          useStore.getState().triggerSkill(skill)
+          triggerSkill(skill)
         }
       }
     }

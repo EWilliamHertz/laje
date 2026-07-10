@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from './store'
 
 export default function FriendsList() {
-  const friends = useStore(state => state.friends)
+  const friends = useStore(state => state.friends) || []
   const [isOpen, setIsOpen] = useState(false)
   
   if (!isOpen) {
