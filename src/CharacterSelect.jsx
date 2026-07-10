@@ -6,7 +6,7 @@ import CharacterModel from './CharacterModel'
 
 const RACES = [
   { id: 'human', name: 'Neo-Terran', desc: 'Adaptable survivors of the ancient cataclysm.' },
-  { id: 'elf', name: 'Aether-Elf', desc: 'Beings deeply attuned to the planet\\'s ley lines.' },
+  { id: 'elf', name: 'Aether-Elf', desc: "Beings deeply attuned to the planet's ley lines." },
   { id: 'cyborg', name: 'Forged', desc: 'Cybernetic organisms built for war.' },
 ]
 
