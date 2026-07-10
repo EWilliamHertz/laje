@@ -106,7 +106,6 @@ export default function Hud() {
         {/* Action Bar Placeholder (Center) */}
         <div className="action-bar-placeholder">
           <div className={`action-slot ${activeKeys['KeyJ'] ? 'active' : ''}`}>J</div>
-          <div className={`action-slot ${activeKeys['KeyK'] ? 'active' : ''}`}>K</div>
         </div>
 
         {/* Futuristic Resource Bar (Right) */}

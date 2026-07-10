@@ -18,7 +18,6 @@ function usePlayerECSInput(eid) {
         case 'KeyA': PlayerControls.left[eid] = 1; break;
         case 'KeyD': PlayerControls.right[eid] = 1; break;
         case 'KeyJ': PlayerAttack.action[eid] = 1; break; // Melee Attack
-        case 'KeyK': PlayerAttack.action[eid] = 2; break; // Ranged Attack
       }
     }
     const handleKeyUp = (e) => {
