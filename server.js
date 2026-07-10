@@ -8,9 +8,9 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-// NeonDB connection
+// NeonDB connection (Node's pg driver doesn't support channel_binding, so we use sslmode=require)
 const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_CySNaR9KFcl4@ep-gentle-unit-atx7180q-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require'
+  connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_CySNaR9KFcl4@ep-gentle-unit-atx7180q-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require'
 })
 
 // Database initialization
@@ -94,7 +94,7 @@ app.post('/api/login', async (req, res) => {
   }
 })
 
-const PORT = 3001
-app.listen(PORT, () => {
-  console.log(`Live Game Backend running on http://localhost:${PORT}`)
+const PORT = process.env.PORT || 3001
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Live Game Backend running on port ${PORT}`)
 })
