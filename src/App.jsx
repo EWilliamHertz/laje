@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { OrthographicCamera, OrbitControls } from '@react-three/drei'
+import { OrthographicCamera } from '@react-three/drei'
 import { Suspense, useEffect } from 'react'
 import World from './World'
 import Character from './Character'
@@ -10,6 +10,7 @@ import Login from './Login'
 import Hud from './Hud'
 import WorldMap from './WorldMap'
 import SkillTree from './SkillTree'
+import Multiplayer from './Multiplayer'
 import { useStore } from './store'
 import './index.css'
 import './login.css'
@@ -55,13 +56,6 @@ export default function App() {
             near={-100}
             far={100}
           />
-          <OrbitControls 
-            enableRotate={false} 
-            enableZoom={true} 
-            enablePan={false}
-            target={[0, 0, 0]} 
-          />
-          
           <ambientLight intensity={0.5} color="#ffffff" />
           <directionalLight 
             castShadow 
@@ -77,6 +71,7 @@ export default function App() {
             <World />
             <Enemies />
             <Character />
+            <Multiplayer />
             <FloatingTexts />
           </Suspense>
         </Canvas>

@@ -6,6 +6,7 @@ import { world, Position, Velocity, Rotation, PlayerControls, PlayerAttack, Heal
 import { playerInputSystem, movementSystem, enemyAISystem, combatSystem } from './ecs/systems'
 import { useStore } from './store'
 import CharacterModel from './CharacterModel'
+import { socket } from './Multiplayer'
 
 function usePlayerECSInput(eid) {
   useEffect(() => {
@@ -95,11 +96,20 @@ export default function Character() {
     
     const charPos = groupRef.current.position
     state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, charPos.x + 20, 0.1)
-    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, charPos.y + 20, 0.1)
+    state.camera.position.y = 20
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, charPos.z + 20, 0.1)
-    state.camera.lookAt(charPos.x, charPos.y, charPos.z)
-
-    if (state.controls) state.controls.target.copy(charPos)
+    state.camera.lookAt(charPos.x, 0, charPos.z)
+    
+    // Multiplayer Sync (20 ticks per second)
+    if (window.frameCount === undefined) window.frameCount = 0
+    window.frameCount++
+    if (window.frameCount % 3 === 0 && socket.connected) {
+      socket.emit('player_move', {
+        position: [charPos.x, charPos.y, charPos.z],
+        rotation: targetRotation,
+        isAttacking: PlayerAttack.cooldown[eid] > 0
+      })
+    }
   })
 
   if (!config || eid === null) return null
