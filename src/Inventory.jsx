@@ -75,7 +75,12 @@ export default function Inventory() {
             </div>
           ) : (
             inventory.map((item, idx) => (
-              <div key={idx} onClick={() => item.type === 'consumable' ? consumeItem(item) : equipItem(item)} style={{
+              <div 
+                key={idx} 
+                draggable
+                onDragStart={(e) => e.dataTransfer.setData('skillId', item.id)}
+                onClick={() => item.type === 'consumable' ? consumeItem(item) : equipItem(item)} 
+                style={{
                 background: 'rgba(15, 23, 42, 0.6)',
                 border: `1px solid ${item.color}`,
                 borderRadius: '0.5rem',

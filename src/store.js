@@ -44,7 +44,7 @@ export const useStore = create((set, get) => ({
   stats: { damage: 10, moveSpeed: 13, critChance: 0.05, cooldownMult: 1, resourceRegen: 6, healthRegen: 1 },
   skillPoints: 0,
   unlockedSkills: [],
-  hotbar: [null, null, null, null, null],
+  hotbar: Array(10).fill(null),
   inventory: [],
   equipped: { weapon: null, armor: null },
   friends: [],
@@ -91,6 +91,10 @@ export const useStore = create((set, get) => ({
     runtime.buffs = {}
     runtime.isDead = false
 
+    let loadedHotbar = parseJson(char.hotbar, Array(10).fill(null));
+    if (!Array.isArray(loadedHotbar)) loadedHotbar = Array(10).fill(null);
+    while (loadedHotbar.length < 10) loadedHotbar.push(null);
+
     set({
       activeCharacter: char,
       characterConfig: { id: char.id, name: char.name, class: char.char_class, race: char.char_race },
@@ -98,7 +102,7 @@ export const useStore = create((set, get) => ({
       xp: char.xp,
       currency: char.currency,
       unlockedSkills,
-      hotbar: parseJson(char.hotbar, [null, null, null, null, null]),
+      hotbar: loadedHotbar,
       inventory: parseJson(char.inventory, []),
       equipped,
       currentArea: position.area || 'hub',

@@ -82,32 +82,63 @@ const XpBar = memo(function XpBar() {
   )
 })
 
-// ── Action bar (keys 1-5) with live cooldown sweeps ─────────────────────
-const ActionBar = memo(function ActionBar() {
-  const hotbar = useStore(s => s.hotbar)
-  const updateHotbar = useStore(s => s.updateHotbar)
+const ActionBarsContainer = memo(function ActionBarsContainer() {
   const triggerSkill = useStore(s => s.triggerSkill)
-  const overlayRefs = useRef([])
-
+  
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (document.activeElement?.tagName === 'INPUT') return;
+      
+      let index = -1;
       if (['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].includes(e.code)) {
-        const skill = useStore.getState().hotbar[parseInt(e.code.slice(-1)) - 1]
-        if (skill) triggerSkill(skill)
+        index = parseInt(e.code.slice(-1)) - 1;
+      } else if (['Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].includes(e.code)) {
+        index = e.code === 'Digit0' ? 9 : parseInt(e.code.slice(-1)) - 1;
+      }
+      
+      if (index !== -1) {
+        const slotId = useStore.getState().hotbar[index]
+        if (!slotId) return;
+        const ability = ABILITIES[slotId]
+        if (ability) {
+          useStore.getState().triggerSkill(slotId)
+        } else {
+          const item = useStore.getState().inventory.find(i => i.id === slotId)
+          if (item && item.type === 'consumable') useStore.getState().consumeItem(item)
+        }
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [triggerSkill])
 
-  // Cooldown sweep painted straight onto the DOM — zero React re-renders.
+  return (
+    <>
+      <ActionBarGroup startIdx={0} endIdx={5} vertical={false} />
+      
+      <div style={{
+        position: 'absolute', right: '2rem', top: '40%', transform: 'translateY(-50%)', pointerEvents: 'auto'
+      }}>
+        <ActionBarGroup startIdx={5} endIdx={10} vertical={true} />
+      </div>
+    </>
+  )
+})
+
+const ActionBarGroup = memo(function ActionBarGroup({ startIdx, endIdx, vertical }) {
+  const hotbar = useStore(s => s.hotbar)
+  const inventory = useStore(s => s.inventory)
+  const updateHotbar = useStore(s => s.updateHotbar)
+  const overlayRefs = useRef([])
+
   useEffect(() => {
     let raf
     const tick = () => {
       const hb = useStore.getState().hotbar
-      hb.forEach((skillId, i) => {
-        const el = overlayRefs.current[i]
-        if (!el) return
+      for (let i = startIdx; i < endIdx; i++) {
+        const skillId = hb[i]
+        const el = overlayRefs.current[i - startIdx]
+        if (!el) continue
         const cd = skillId ? runtime.cooldowns[skillId] : null
         if (cd && cd.readyAt > Date.now()) {
           const remaining = (cd.readyAt - Date.now()) / 1000
@@ -119,12 +150,12 @@ const ActionBar = memo(function ActionBar() {
           el.style.opacity = '0'
           el.textContent = ''
         }
-      })
+      }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [])
+  }, [startIdx, endIdx])
 
   const handleDrop = (e, index) => {
     e.preventDefault()
@@ -132,43 +163,58 @@ const ActionBar = memo(function ActionBar() {
     if (skillId) updateHotbar(index, skillId)
   }
 
+  const renderSlot = (slotId, index) => {
+    const ability = slotId ? ABILITIES[slotId] : null
+    const item = (!ability && slotId) ? inventory.find(i => i.id === slotId) : null
+    const displayChar = index + 1 === 10 ? '0' : (index + 1).toString()
+    
+    // Fallback display if it's an item (no icon but name instead)
+    const innerContent = ability ? (
+      <span>{ability.icon}</span>
+    ) : item ? (
+      <span style={{ fontSize: '0.6rem', color: item.color, textAlign: 'center', lineHeight: '1' }}>{item.name.substring(0, 4)}</span>
+    ) : null;
+    
+    const title = ability ? `${ability.name} — ${ability.cost} energy` 
+                : item ? `${item.name}` 
+                : 'Drag a skill or consumable here'
+
+    return (
+      <div
+        key={index}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => handleDrop(e, index)}
+        title={title}
+        style={{
+          width: '58px', height: '58px', position: 'relative',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.7rem', borderRadius: '0.5rem',
+          background: 'rgba(2,6,23,0.75)', backdropFilter: 'blur(8px)',
+          border: slotId ? (item ? `1px solid ${item.color}70` : '1px solid rgba(96,165,250,0.7)') : '1px solid rgba(255,255,255,0.12)',
+          boxShadow: slotId ? (item ? `0 0 15px ${item.color}35` : '0 0 15px rgba(96,165,250,0.35)') : 'none',
+          clipPath: 'polygon(12% 0, 100% 0, 88% 100%, 0 100%)'
+        }}
+      >
+        {innerContent}
+        <div
+          ref={el => (overlayRefs.current[index - startIdx] = el)}
+          style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'Orbitron', fontWeight: 900, fontSize: '0.9rem', color: '#facc15',
+            pointerEvents: 'none', opacity: 0
+          }}
+        />
+        <div style={{
+          position: 'absolute', top: '2px', right: '8px',
+          fontFamily: 'Orbitron', fontSize: '0.55rem', fontWeight: 900, color: '#60a5fa'
+        }}>{displayChar}</div>
+      </div>
+    )
+  }
+
   return (
-    <div style={{ display: 'flex', gap: '0.5rem' }}>
-      {hotbar.map((skillId, index) => {
-        const ability = skillId ? ABILITIES[skillId] : null
-        return (
-          <div
-            key={index}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e, index)}
-            title={ability ? `${ability.name} — ${ability.cost} energy` : 'Drag a skill here from the Skill Matrix [K]'}
-            style={{
-              width: '58px', height: '58px', position: 'relative',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.7rem', borderRadius: '0.5rem',
-              background: 'rgba(2,6,23,0.75)', backdropFilter: 'blur(8px)',
-              border: skillId ? '1px solid rgba(96,165,250,0.7)' : '1px solid rgba(255,255,255,0.12)',
-              boxShadow: skillId ? '0 0 15px rgba(96,165,250,0.35)' : 'none',
-              clipPath: 'polygon(12% 0, 100% 0, 88% 100%, 0 100%)'
-            }}
-          >
-            <span>{ability?.icon || ''}</span>
-            {/* cooldown sweep overlay */}
-            <div
-              ref={el => (overlayRefs.current[index] = el)}
-              style={{
-                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Orbitron', fontWeight: 900, fontSize: '0.9rem', color: '#facc15',
-                pointerEvents: 'none', opacity: 0
-              }}
-            />
-            <div style={{
-              position: 'absolute', top: '2px', right: '8px',
-              fontFamily: 'Orbitron', fontSize: '0.55rem', fontWeight: 900, color: '#60a5fa'
-            }}>{index + 1}</div>
-          </div>
-        )
-      })}
+    <div style={{ display: 'flex', flexDirection: vertical ? 'column' : 'row', gap: '0.5rem' }}>
+      {hotbar.slice(startIdx, endIdx).map((slotId, loopIndex) => renderSlot(slotId, startIdx + loopIndex))}
     </div>
   )
 })
@@ -310,7 +356,7 @@ export default function Hud() {
         <HealthOrb />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', paddingBottom: '1.1rem' }}>
           <XpBar />
-          <ActionBar />
+          <ActionBarsContainer />
           <div style={{ fontFamily: 'Orbitron', fontSize: '0.55rem', color: '#475569', letterSpacing: '0.15em' }}>
             [WASD] MOVE · [J / SPACE] ATTACK · [1-5] SKILLS
           </div>
