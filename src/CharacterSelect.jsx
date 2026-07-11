@@ -18,8 +18,13 @@ const CLASSES = [
 
 export default function CharacterSelect() {
   const setCharacterConfig = useStore(state => state.setCharacterConfig)
-  const [selectedClass, setSelectedClass] = useState(CLASSES[0])
-  const [selectedRace, setSelectedRace] = useState(RACES[0])
+  const userProfile = useStore(state => state.userProfile)
+  
+  const savedRace = userProfile?.char_race ? RACES.find(r => r.id === userProfile.char_race) : null
+  const savedClass = userProfile?.char_class ? CLASSES.find(c => c.id === userProfile.char_class) : null
+
+  const [selectedClass, setSelectedClass] = useState(savedClass || CLASSES[0])
+  const [selectedRace, setSelectedRace] = useState(savedRace || RACES[0])
 
   const handleStart = () => {
     setCharacterConfig({
@@ -33,51 +38,57 @@ export default function CharacterSelect() {
       
       {/* Left Panel: Selection UI */}
       <div style={{ flex: 1, padding: '4rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', zIndex: 10, overflowY: 'auto' }}>
-        <h1 style={{ fontSize: '3rem', margin: '0 0 2rem 0', color: 'white' }}>INITIATE UPLINK</h1>
+        <h1 style={{ fontSize: '3rem', margin: '0 0 2rem 0', color: 'white' }}>
+          {savedClass ? 'SAVED MODULE FOUND' : 'INITIATE UPLINK'}
+        </h1>
         
-        <h3 style={{ color: '#94a3b8', marginBottom: '1rem', textTransform: 'uppercase' }}>Select Lineage (Race)</h3>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-          {RACES.map(r => (
-            <button 
-              key={r.id}
-              onClick={() => setSelectedRace(r)}
-              style={{
-                padding: '0.8rem 1.5rem',
-                background: selectedRace.id === r.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)',
-                color: selectedRace.id === r.id ? 'white' : '#94a3b8',
-                border: `1px solid ${selectedRace.id === r.id ? 'white' : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                transition: 'all 0.2s'
-              }}
-            >
-              {r.name}
-            </button>
-          ))}
-        </div>
+        {!savedClass && (
+          <>
+            <h3 style={{ color: '#94a3b8', marginBottom: '1rem', textTransform: 'uppercase' }}>Select Lineage (Race)</h3>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+              {RACES.map(r => (
+                <button 
+                  key={r.id}
+                  onClick={() => setSelectedRace(r)}
+                  style={{
+                    padding: '0.8rem 1.5rem',
+                    background: selectedRace.id === r.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)',
+                    color: selectedRace.id === r.id ? 'white' : '#94a3b8',
+                    border: `1px solid ${selectedRace.id === r.id ? 'white' : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
 
-        <h3 style={{ color: '#94a3b8', marginBottom: '1rem', textTransform: 'uppercase' }}>Select Combat Matrix (Class)</h3>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-          {CLASSES.map(c => (
-            <button 
-              key={c.id}
-              onClick={() => setSelectedClass(c)}
-              style={{
-                padding: '0.8rem 1.5rem',
-                background: selectedClass.id === c.id ? c.color : 'rgba(255,255,255,0.05)',
-                color: selectedClass.id === c.id ? 'white' : '#94a3b8',
-                border: `1px solid ${selectedClass.id === c.id ? c.color : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                transition: 'all 0.2s'
-              }}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
+            <h3 style={{ color: '#94a3b8', marginBottom: '1rem', textTransform: 'uppercase' }}>Select Combat Matrix (Class)</h3>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+              {CLASSES.map(c => (
+                <button 
+                  key={c.id}
+                  onClick={() => setSelectedClass(c)}
+                  style={{
+                    padding: '0.8rem 1.5rem',
+                    background: selectedClass.id === c.id ? c.color : 'rgba(255,255,255,0.05)',
+                    color: selectedClass.id === c.id ? 'white' : '#94a3b8',
+                    border: `1px solid ${selectedClass.id === c.id ? c.color : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }}>
           <h2 style={{ margin: '0 0 0.5rem 0', color: 'white', fontSize: '1.2rem' }}>{selectedRace.name}</h2>
@@ -104,7 +115,7 @@ export default function CharacterSelect() {
             boxShadow: `0 0 30px ${selectedClass.color}66`
           }}
         >
-          DEPLOY TO SURFACE
+          {savedClass ? 'RESUME UPLINK' : 'DEPLOY TO SURFACE'}
         </button>
       </div>
 

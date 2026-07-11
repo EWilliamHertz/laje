@@ -63,13 +63,17 @@ async function initDB() {
         hotbar JSONB DEFAULT '[null, null, null, null, null]'::jsonb,
         inventory JSONB DEFAULT '[]'::jsonb,
         equipped JSONB DEFAULT '{"weapon": null, "armor": null}'::jsonb,
-        friends JSONB DEFAULT '[]'::jsonb
+        friends JSONB DEFAULT '[]'::jsonb,
+        char_class VARCHAR(50),
+        char_race VARCHAR(50)
       )
     `)
     // Run alters to ensure columns exist for older rows
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS inventory JSONB DEFAULT '[]'::jsonb`)
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped JSONB DEFAULT '{"weapon": null, "armor": null}'::jsonb`)
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS friends JSONB DEFAULT '[]'::jsonb`)
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS char_class VARCHAR(50)`)
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS char_race VARCHAR(50)`)
     console.log('Database schema ensured.')
   } catch (err) {
     console.error('Error initializing DB:', err)
@@ -102,7 +106,8 @@ app.post('/api/login', async (req, res) => {
     if (user.password !== password) return res.status(401).json({ error: 'Invalid' })
     res.json({ 
       id: user.id, username: user.username, level: user.level, xp: user.xp, currency: user.currency,
-      unlocked_skills: user.unlocked_skills, hotbar: user.hotbar, inventory: user.inventory, equipped: user.equipped, friends: user.friends
+      unlocked_skills: user.unlocked_skills, hotbar: user.hotbar, inventory: user.inventory, equipped: user.equipped, friends: user.friends,
+      char_class: user.char_class, char_race: user.char_race
     })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -110,11 +115,11 @@ app.post('/api/login', async (req, res) => {
 })
 
 app.post('/api/save', async (req, res) => {
-  const { id, level, xp, currency, unlockedSkills, hotbar, inventory, equipped, friends } = req.body
+  const { id, level, xp, currency, unlockedSkills, hotbar, inventory, equipped, friends, charClass, charRace } = req.body
   if (!id) return res.status(400).json({ error: 'Missing ID' })
   try {
     await pool.query(
-      'UPDATE users SET level = $1, xp = $2, currency = $3, unlocked_skills = $4, hotbar = $5, inventory = $6, equipped = $7, friends = $8 WHERE id = $9',
+      'UPDATE users SET level = $1, xp = $2, currency = $3, unlocked_skills = $4, hotbar = $5, inventory = $6, equipped = $7, friends = $8, char_class = $9, char_race = $10 WHERE id = $11',
       [
         level, 
         xp, 
@@ -124,6 +129,8 @@ app.post('/api/save', async (req, res) => {
         JSON.stringify(inventory || []),
         JSON.stringify(equipped || {weapon: null, armor: null}),
         JSON.stringify(friends || []),
+        charClass || null,
+        charRace || null,
         id
       ]
     )

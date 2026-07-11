@@ -99,7 +99,9 @@ export const useStore = create((set) => ({
         hotbar: state.hotbar,
         inventory: state.inventory,
         equipped: state.equipped,
-        friends: state.friends
+        friends: state.friends,
+        charClass: state.characterConfig?.class,
+        charRace: state.characterConfig?.race
       })
     }).catch(console.error)
   },
@@ -138,7 +140,10 @@ export const useStore = create((set) => ({
     equipped: profile.equipped ? (typeof profile.equipped === 'string' ? JSON.parse(profile.equipped) : profile.equipped) : { weapon: null, armor: null },
     friends: profile.friends ? (typeof profile.friends === 'string' ? JSON.parse(profile.friends) : profile.friends) : []
   }),
-  setCharacterConfig: (config) => set({ characterConfig: config }),
+  setCharacterConfig: (config) => {
+    set({ characterConfig: config })
+    get().saveProgress()
+  },
   setHealth: (amount) => set({ health: amount }),
   updateHealth: (amount) => set((state) => ({ health: Math.min(state.maxHealth, Math.max(0, state.health + amount)) })),
   updateResource: (amount) => set((state) => ({ resource: Math.min(state.maxResource, Math.max(0, state.resource + amount)) })),
