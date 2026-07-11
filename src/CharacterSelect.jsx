@@ -110,7 +110,7 @@ export default function CharacterSelect() {
 
       {/* Right Panel: 3D Model Preview! */}
       <div style={{ flex: 1, position: 'relative' }}>
-        <Canvas shadows camera={{ position: [0, 2, 8], fov: 45 }}>
+        <Canvas shadows dpr={[1, 1.5]} camera={{ position: [0, 2, 8], fov: 45 }}>
           <ambientLight intensity={0.5} />
           <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
           

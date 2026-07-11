@@ -8,12 +8,22 @@ import { chromium } from 'playwright';
   
   await page.goto('http://localhost:5173');
   
-  // Login
+  // Login with correct credentials (we can create one first)
+  // Register:
   await page.waitForSelector('input[type="text"]');
-  await page.fill('input[type="text"]', 'testuser');
+  await page.fill('input[type="text"]', 'bot_' + Date.now());
   await page.fill('input[type="password"]', 'testpass');
-  await page.click('button[type="submit"]');
+  await page.click('button:has-text("Register")');
   
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(2000);
+  
+  // Select character
+  const classSelectors = await page.$$('div.class-card');
+  if (classSelectors.length > 0) {
+     await classSelectors[0].click();
+     await page.click('button:has-text("Enter World")');
+  }
+  
+  await page.waitForTimeout(10000); // wait longer to see if it crashes
   await browser.close();
 })();

@@ -59,7 +59,7 @@ export default function App() {
       </div>
 
       {isLoggedIn && characterConfig && (
-        <Canvas shadows>
+        <Canvas shadows dpr={[1, 1.5]}>
           <OrthographicCamera 
             makeDefault 
             position={[20, 20, 20]} 
@@ -73,7 +73,7 @@ export default function App() {
             position={[10, 20, 15]} 
             intensity={1.2} 
             color="#ffebb3"
-            shadow-mapSize={[2048, 2048]}
+            shadow-mapSize={[1024, 1024]}
           >
             <orthographicCamera attach="shadow-camera" args={[-30, 30, 30, -30]} />
           </directionalLight>
