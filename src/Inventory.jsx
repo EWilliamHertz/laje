@@ -90,9 +90,18 @@ export default function Inventory() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  cursor: 'grab'
+                  cursor: 'grab',
+                  position: 'relative'
                 }}
               >
+                {item.type === 'consumable' && (item.qty || 1) > 1 && (
+                  <div style={{
+                    position: 'absolute', top: '0.4rem', right: '0.5rem',
+                    background: 'rgba(96,165,250,0.25)', border: '1px solid rgba(96,165,250,0.6)',
+                    borderRadius: '0.25rem', padding: '0.1rem 0.4rem',
+                    fontFamily: 'Orbitron', fontSize: '0.7rem', fontWeight: 900, color: '#93c5fd'
+                  }}>x{item.qty}</div>
+                )}
                 <div style={{ color: item.color, fontWeight: 'bold', textAlign: 'center', fontSize: '0.9rem' }}>{item.name}</div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: {item.type === 'consumable' ? 'Consumable' : (item.id.includes('weapon') ? 'Weapon' : 'Armor')}</div>
                 <div style={{ color: 'white', fontWeight: 'bold' }}>{item.type === 'consumable' ? 'Effect' : 'Power'}: {item.power}</div>

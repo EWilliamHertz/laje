@@ -19,6 +19,19 @@ export function getBuffValue(key) {
   return b && b.until > Date.now() ? b.value : 0
 }
 
+// Merge duplicate consumables (from older saves) into qty stacks
+const normalizeInventory = (inv) => {
+  const out = []
+  for (const item of inv || []) {
+    if (item.type === 'consumable') {
+      const existing = out.find(i => i.type === 'consumable' && i.name === item.name)
+      if (existing) { existing.qty = (existing.qty || 1) + (item.qty || 1); continue }
+      out.push({ ...item, qty: item.qty || 1 })
+    } else out.push(item)
+  }
+  return out
+}
+
 const parseJson = (v, fallback) => {
   if (v == null) return fallback
   if (typeof v === 'string') { try { return JSON.parse(v) } catch { return fallback } }
@@ -115,7 +128,7 @@ export const useStore = create((set, get) => ({
       unlockedSkills,
       hotbar: loadedHotbar,
       keybinds: loadedKeybinds,
-      inventory: parseJson(char.inventory, []),
+      inventory: normalizeInventory(parseJson(char.inventory, [])),
       equipped,
       currentArea: position.area || 'hub',
       stats,
@@ -287,7 +300,19 @@ export const useStore = create((set, get) => ({
   clearTriggeredSkill: () => set({ triggeredSkill: null }),
 
   // ── Inventory & equipment ──────────────────────────────────────────
-  addInventoryItem: (item) => set(state => ({ inventory: [...state.inventory, item] })),
+  addInventoryItem: (item) => set(state => {
+    // Consumables with the same name stack into one slot
+    if (item.type === 'consumable') {
+      const idx = state.inventory.findIndex(i => i.type === 'consumable' && i.name === item.name)
+      if (idx !== -1) {
+        const newInv = [...state.inventory]
+        newInv[idx] = { ...newInv[idx], qty: (newInv[idx].qty || 1) + (item.qty || 1) }
+        return { inventory: newInv }
+      }
+      return { inventory: [...state.inventory, { ...item, qty: item.qty || 1 }] }
+    }
+    return { inventory: [...state.inventory, item] }
+  }),
 
   equipItem: (item) => {
     set(state => {
@@ -309,8 +334,12 @@ export const useStore = create((set, get) => ({
           // Wait, updateHealth is a separate function, we can call it outside set
         }
         const newInv = [...state.inventory]
-        const idx = newInv.findIndex(i => i.id === item.id)
-        if (idx !== -1) newInv.splice(idx, 1)
+        const idx = newInv.findIndex(i => i.id === item.id || (i.type === 'consumable' && i.name === item.name))
+        if (idx !== -1) {
+          const qty = newInv[idx].qty || 1
+          if (qty > 1) newInv[idx] = { ...newInv[idx], qty: qty - 1 }
+          else newInv.splice(idx, 1)
+        }
         return { inventory: newInv }
       }
       return state
