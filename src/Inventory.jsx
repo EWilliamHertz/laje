@@ -79,7 +79,7 @@ export default function Inventory() {
               <div 
                 key={idx} 
                 draggable={true}
-                onDragStart={(e) => e.dataTransfer.setData('text/plain', item.id)}
+                onDragStart={(e) => e.dataTransfer.setData('text/plain', item.type === 'consumable' ? `item:${item.name}` : item.id)}
                 onClick={() => item.type === 'consumable' ? consumeItem(item) : equipItem(item)} 
                 style={{ 
                   background: 'rgba(0,0,0,0.5)', 

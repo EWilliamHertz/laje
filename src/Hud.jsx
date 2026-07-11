@@ -210,8 +210,11 @@ const ActionBarsContainer = memo(function ActionBarsContainer() {
         if (ability) {
           useStore.getState().triggerSkill(slotId)
         } else {
-          const item = useStore.getState().inventory.find(i => i.id === slotId)
-          if (item && item.type === 'consumable') useStore.getState().consumeItem(item)
+          const inv = useStore.getState().inventory
+          const item = inv.find(i => `item:${i.name}` === slotId || i.id === slotId)
+          if (!item) return
+          if (item.type === 'consumable') useStore.getState().consumeItem(item)
+          else useStore.getState().equipItem(item)
         }
       }
     }
@@ -263,7 +266,8 @@ const ActionBarGroup = memo(function ActionBarGroup({ startIdx, endIdx, vertical
 
   const renderSlot = (slotId, index) => {
     const ability = slotId ? ABILITIES[slotId] : null
-    const item = (!ability && slotId) ? inventory.find(i => i.id === slotId) : null
+    const item = (!ability && slotId) ? inventory.find(i => `item:${i.name}` === slotId || i.id === slotId) : null
+    const emptyItemRef = (!ability && !item && slotId && slotId.startsWith('item:')) ? slotId.slice(5) : null
     let displayChar = keybinds[index] ? keybinds[index].replace('Key', '').replace('Digit', '') : '?'
     
     // Fallback display if it's an item (no icon but name instead)
