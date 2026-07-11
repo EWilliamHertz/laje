@@ -46,12 +46,17 @@ export default function Multiplayer() {
         })
       })
 
+      socket.on('chat_message', (msg) => {
+        useStore.getState().addChatMessage(msg)
+      })
+
       return () => {
         socket.disconnect()
         socket.off('current_players')
         socket.off('player_joined')
         socket.off('player_moved')
         socket.off('player_left')
+        socket.off('chat_message')
       }
     }
   }, [isLoggedIn, config, userProfile])

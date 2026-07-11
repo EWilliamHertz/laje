@@ -14,6 +14,7 @@ import Inventory from './Inventory'
 import Merchant from './Merchant'
 import FriendsList from './FriendsList'
 import Multiplayer from './Multiplayer'
+import Chat from './Chat'
 import { useStore } from './store'
 import './index.css'
 import './login.css'
@@ -75,6 +76,7 @@ export default function App() {
             <Inventory />
             <Merchant />
             <FriendsList />
+            <Chat />
           </>
         )}
       </div>

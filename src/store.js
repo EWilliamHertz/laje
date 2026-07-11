@@ -59,6 +59,7 @@ export const useStore = create((set, get) => ({
   triggeredSkill: null,
   lastSavedAt: null,
   saveState: 'idle', // idle | saving | saved | error
+  chatMessages: [],
 
   // ── Auth ───────────────────────────────────────────────────────────
   login: (profile) => set({
@@ -327,5 +328,12 @@ export const useStore = create((set, get) => ({
   })),
   removeFloatingText: (id) => set(state => ({
     floatingTexts: state.floatingTexts.filter(ft => ft.id !== id)
-  }))
+  })),
+  
+  // ── Chat ───────────────────────────────────────────────────────────
+  addChatMessage: (msg) => set(state => {
+    const newChat = [...state.chatMessages, msg];
+    if (newChat.length > 50) newChat.shift(); // Keep max 50 messages
+    return { chatMessages: newChat };
+  })
 }))

@@ -45,6 +45,12 @@ io.on('connection', (socket) => {
     delete players[socket.id]
     io.emit('player_left', socket.id)
   })
+
+  // ── Global Chat ──
+  socket.on('chat_message', (msgData) => {
+    // msgData: { senderId, senderName, text, timestamp }
+    io.emit('chat_message', msgData)
+  })
 })
 
 // NeonDB connection
