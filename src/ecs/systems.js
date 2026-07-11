@@ -4,6 +4,7 @@ import { useStore, runtime, getBuffValue } from '../store'
 import { ABILITIES } from '../data/skills'
 import { ENEMY_TYPES, scaleEnemy, rollLoot } from '../data/items'
 import { socket } from '../Multiplayer'
+import { playHitSound, playAttackSound } from '../audio'
 
 // Helper for 2D distance
 function getDistance(x1, z1, x2, z2) {
@@ -51,9 +52,19 @@ export function playerInputSystem(world, playerEid) {
 export function enemyAISystem(world, playerEid, delta) {
   if (playerEid === null) return
 
-  const px = Position.x[playerEid]
-  const pz = Position.z[playerEid]
+  const store = useStore.getState()
   const cloaked = runtime.cloakedUntil > Date.now() || runtime.isDead
+
+  // Build list of valid targets
+  const targets = []
+  if (!cloaked) {
+    targets.push({ id: 'local', x: Position.x[playerEid], z: Position.z[playerEid] })
+  }
+  for (const p of Object.values(store.otherPlayers)) {
+    if (p.health > 0) {
+      targets.push({ id: p.id, x: p.position[0], z: p.position[2] })
+    }
+  }
 
   for (const eid of query(world, [Enemy, Position, Velocity, Rotation, Health])) {
     if (Health.current[eid] <= 0) {
@@ -65,21 +76,30 @@ export function enemyAISystem(world, playerEid, delta) {
     const type = ENEMY_TYPES[Enemy.type[eid]] || ENEMY_TYPES[0]
     const ex = Position.x[eid]
     const ez = Position.z[eid]
-    const dist = getDistance(px, pz, ex, ez)
     const aggroRange = type.behavior === 'boss' ? 40 : 25
     const attackRange = type.size + 0.8
 
+    // Find nearest target
+    let nearestDist = Infinity
+    let target = null
+    for (const t of targets) {
+      const d = getDistance(t.x, t.z, ex, ez)
+      if (d < nearestDist) {
+        nearestDist = d
+        target = t
+      }
+    }
+
     if (Enemy.attackTimer[eid] > 0) Enemy.attackTimer[eid] -= delta
 
-    if (!cloaked && dist < aggroRange && dist > attackRange) {
-      const dx = px - ex
-      const dz = pz - ez
+    if (target && nearestDist < aggroRange && nearestDist > attackRange) {
+      const dx = target.x - ex
+      const dz = target.z - ez
       const length = Math.sqrt(dx * dx + dz * dz)
       let vx = (dx / length) * type.speed
       let vz = (dz / length) * type.speed
 
-      // Flankers weave sideways while closing in
-      if (type.behavior === 'flank' && dist > 4) {
+      if (type.behavior === 'flank' && nearestDist > 4) {
         if (Enemy.strafeDir[eid] === 0) Enemy.strafeDir[eid] = Math.random() > 0.5 ? 1 : -1
         const perpX = -dz / length, perpZ = dx / length
         vx += perpX * type.speed * 0.6 * Enemy.strafeDir[eid]
@@ -90,15 +110,17 @@ export function enemyAISystem(world, playerEid, delta) {
       Velocity.x[eid] = vx
       Velocity.z[eid] = vz
       Rotation.y[eid] = Math.atan2(dx, dz)
-    } else if (!cloaked && dist <= attackRange) {
+    } else if (target && nearestDist <= attackRange) {
       Velocity.x[eid] = 0
       Velocity.z[eid] = 0
-      // Discrete, level-scaled attacks on a cooldown instead of constant drain
       if (Enemy.attackTimer[eid] <= 0) {
         const scaled = scaleEnemy(Enemy.type[eid], Enemy.level[eid] || 1)
-        Health.current[playerEid] -= scaled.dmg
+        if (target.id === 'local') {
+          Health.current[playerEid] -= scaled.dmg
+          useStore.getState().addFloatingText(`-${scaled.dmg}`, [target.x, 2.2, target.z], '#f87171')
+          playHitSound()
+        }
         Enemy.attackTimer[eid] = type.behavior === 'brute' ? 2.0 : type.behavior === 'boss' ? 1.6 : 1.2
-        useStore.getState().addFloatingText(`-${scaled.dmg}`, [px, 2.2, pz], '#f87171')
       }
     } else {
       Velocity.x[eid] = 0
@@ -116,6 +138,10 @@ function damageEnemy(eid, amount, opts = {}) {
 
   if (Health.current[eid] <= 0) return
   Health.current[eid] -= final
+  
+  if (opts.broadcast !== false && socket && socket.connected) {
+    socket.emit('enemy_hit', { enemyId: Enemy.serverId[eid], damage: final })
+  }
 
   const ex = Position.x[eid]
   const ez = Position.z[eid]
@@ -157,6 +183,15 @@ function damageEnemy(eid, amount, opts = {}) {
 function playerDamage() {
   const store = useStore.getState()
   return store.stats.damage * (1 + getBuffValue('damagePct'))
+}
+
+export function networkDamageEnemy(world, serverId, amount) {
+  for (const eid of query(world, [Enemy, Health])) {
+    if (Enemy.serverId[eid] === serverId) {
+      damageEnemy(eid, amount, { broadcast: false })
+      return
+    }
+  }
 }
 
 // Execute an active ability from the hotbar.
@@ -251,6 +286,7 @@ export function combatSystem(world, delta, playerEid) {
   if (PlayerAttack.action[playerEid] === 1 && PlayerAttack.cooldown[playerEid] <= 0 && !runtime.isDead) {
     PlayerAttack.action[playerEid] = 0
     PlayerAttack.cooldown[playerEid] = 0.5
+    playAttackSound()
 
     const px = Position.x[playerEid]
     const pz = Position.z[playerEid]

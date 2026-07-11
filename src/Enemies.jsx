@@ -9,6 +9,11 @@ import { ENEMY_TYPES, AREA_SPAWNS, scaleEnemy } from './data/items'
 const MAX_PER_TYPE = 32
 const RESPAWN_SECONDS = 12
 
+function pseudoRandom(seed) {
+  const x = Math.sin(seed + 1.1) * 10000;
+  return x - Math.floor(x);
+}
+
 // One instanced mesh per enemy archetype → varied silhouettes, still 4 draw calls.
 function enemyGeometry(key) {
   switch (key) {
@@ -28,7 +33,7 @@ export default function Enemies() {
   // eids grouped per type index + respawn bookkeeping
   const spawned = useRef([]) // [{ eid, typeIdx, deadSince }]
 
-  const spawnEnemy = (typeIdx, playerLevel) => {
+  const spawnEnemy = (typeIdx, playerLevel, index) => {
     const eid = addEntity(world)
     addComponent(world, eid, Position)
     addComponent(world, eid, Velocity)
@@ -36,18 +41,24 @@ export default function Enemies() {
     addComponent(world, eid, Enemy)
     addComponent(world, eid, Health)
 
-    const angle = Math.random() * Math.PI * 2
-    const radius = 15 + Math.random() * 25
+    const seed = typeIdx * 1000 + index
+    const r1 = pseudoRandom(seed)
+    const r2 = pseudoRandom(seed + 1)
+    const r3 = pseudoRandom(seed + 2)
+
+    const angle = r1 * Math.PI * 2
+    const radius = 15 + r2 * 25
     Position.x[eid] = Math.cos(angle) * radius
     Position.y[eid] = ENEMY_TYPES[typeIdx].size * 0.5
     Position.z[eid] = Math.sin(angle) * radius
 
-    const level = Math.max(1, playerLevel + Math.floor(Math.random() * 3) - 1)
+    const level = Math.max(1, playerLevel + Math.floor(r3 * 3) - 1)
     const scaled = scaleEnemy(typeIdx, level)
     Enemy.type[eid] = typeIdx
     Enemy.level[eid] = level
     Enemy.attackTimer[eid] = 0
     Enemy.strafeDir[eid] = 0
+    Enemy.serverId[eid] = seed
     Health.current[eid] = scaled.hp
     Health.max[eid] = scaled.hp
     return eid
@@ -62,7 +73,7 @@ export default function Enemies() {
     const table = AREA_SPAWNS[currentArea] || AREA_SPAWNS.hub
     for (const [typeIdx, count] of table) {
       for (let i = 0; i < count; i++) {
-        spawned.current.push({ eid: spawnEnemy(typeIdx, playerLevel), typeIdx, deadSince: null })
+        spawned.current.push({ eid: spawnEnemy(typeIdx, playerLevel, i), typeIdx, index: i, deadSince: null })
       }
     }
 
@@ -86,7 +97,7 @@ export default function Enemies() {
         if (Position.y[eid] > -2.5) Position.y[eid] -= 0.05
         if (now - s.deadSince > RESPAWN_SECONDS * 1000) {
           removeEntity(world, eid)
-          s.eid = spawnEnemy(s.typeIdx, useStore.getState().level)
+          s.eid = spawnEnemy(s.typeIdx, useStore.getState().level, s.index)
           s.deadSince = null
           continue
         }

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { api } from './api'
 import { xpForLevel, computeDerivedStats, totalSkillPoints, MAX_LEVEL } from './data/progression'
 import { aggregatePassives, getNode, ABILITIES } from './data/skills'
+import { playSkillSound, playLevelUpSound, playHitSound } from './audio'
 
 // Non-reactive, high-frequency data. Mutated directly every frame so the UI
 // never re-renders because of it. Read by the minimap / auto-save / systems.
@@ -211,6 +212,7 @@ export const useStore = create((set, get) => ({
       // Full heal + refill on level up (ECS picks up the flag next frame)
       runtime.pendingFullHeal = true
       set({ health: s.maxHealth, resource: s.maxResource })
+      playLevelUpSound()
       get().addFloatingText(`LEVEL ${newLevel}!`, [runtime.playerPos.x, 3, runtime.playerPos.z], '#fbbf24')
       get().addFloatingText('+1 SKILL POINT', [runtime.playerPos.x, 3.8, runtime.playerPos.z], '#60a5fa')
       get().saveCharacter()
@@ -295,6 +297,7 @@ export const useStore = create((set, get) => ({
     }
     const duration = (ability.cooldown || 1) * state.stats.cooldownMult
     runtime.cooldowns[skillId] = { readyAt: Date.now() + duration * 1000, duration }
+    playSkillSound()
     set({ resource: Math.max(0, state.resource - (ability.cost || 0)), triggeredSkill: skillId })
   },
   clearTriggeredSkill: () => set({ triggeredSkill: null }),

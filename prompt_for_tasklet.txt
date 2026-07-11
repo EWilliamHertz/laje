@@ -1,0 +1,25 @@
+Please read this context and continue the development of our React Three Fiber browser MMO.
+
+### Issue to Fix First:
+The game has now frozen to be stuck in a blue screen mode whenever you start the game. You can still chat, click buttons and such but you cannot walk. Please fix that and introduce a good feature as well. 
+(Hint: The UI menus are working but the Canvas is either crashing, suspending infinitely due to a missing texture like `floor.jpg`, or a UI overlay with pointer-events is blocking it. Please investigate the React Canvas and Vite browser logs to restore 3D movement).
+
+### What We Have Done So Far:
+- Initialized a 3D browser MMO using React Three Fiber, Vite, and a custom ECS (bitECS).
+- Implemented character classes (Knight, Mage, Rogue) with unique base stats and 3D models.
+- Created an inventory system with drag-and-drop item management and equipment slots.
+- Implemented a skill tree and an ability matrix (unlockable skills).
+- Developed an ECS-based combat system with damage floating text, HP tracking, cooldowns, and enemy AI.
+- Added a merchant NPC that sells gear/potions, and a quest NPC with a "kill X enemies" quest tracking system.
+- Created a Boss Health Bar UI overlay that tracks boss HP dynamically.
+- Implemented dynamic hotkey rebinding for action bars (users can hover over a slot and press a key to rebind it).
+- Layered the UI (z-index) so menus properly overlap the world canvas and action bars.
+- Configured ngrok tunneling in `package.json` so the server can be shared for multiplayer testing.
+
+### What We Want Done Next:
+1. **Fix the Blue Screen Bug**: Restore the 3D Canvas rendering and WASD movement.
+2. **PVP Dueling System**: Implement PVP dueling mechanics where players can type `/duel <name>` and `/accept duel` to fight each other.
+3. **Black Market**: Introduce a Black Market functionality (a special area or NPC selling rare items).
+4. **New Feature**: Introduce a fun new feature to the game (e.g. a mount system, interactive emotes, or a global chat leaderboard).
+
+Please execute these steps, run the game, and verify everything works!

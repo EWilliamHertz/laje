@@ -16,7 +16,8 @@ export const world = createWorld({
       type: new Uint8Array(1e4),        // index into ENEMY_TYPES
       level: new Uint8Array(1e4),       // scaled enemy level
       attackTimer: new Float32Array(1e4), // time until next hit
-      strafeDir: new Int8Array(1e4)     // flanking direction (-1 / 1)
+      strafeDir: new Int8Array(1e4),    // flanking direction (-1 / 1)
+      serverId: new Float32Array(1e4)   // deterministic ID for multiplayer sync
     },
     Health: { current: new Float32Array(1e4), max: new Float32Array(1e4) }
   }

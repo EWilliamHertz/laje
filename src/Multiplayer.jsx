@@ -6,6 +6,8 @@ import { Billboard, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
 import { API_BASE } from './api'
+import { world } from './ecs/world'
+import { networkDamageEnemy } from './ecs/systems'
 
 export const socket = io(API_BASE, { autoConnect: false })
 
@@ -44,6 +46,10 @@ export default function Multiplayer() {
 
       socket.on('chat_message', (msg) => {
         useStore.getState().addChatMessage(msg)
+      })
+
+      socket.on('enemy_hit', ({ enemyId, damage, hitterId }) => {
+        networkDamageEnemy(world, enemyId, damage)
       })
 
       socket.on('party_invite', (sender) => {

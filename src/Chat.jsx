@@ -58,6 +58,19 @@ export default function Chat() {
         const target = text.substring(6).trim()
         socket.emit('duel_request', target)
         useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `Challenged ${target} to a duel...` })
+      } else if (text === '/tp boss') {
+        import('./store').then(({ runtime }) => {
+          import('./ecs/world').then(({ Position }) => {
+            if (runtime.playerEid !== null) {
+              Position.x[runtime.playerEid] = 0
+              Position.z[runtime.playerEid] = 0
+              runtime.playerPos.x = 0
+              runtime.playerPos.z = 0
+            }
+          })
+        })
+        useStore.getState().setArea('ruined_spire')
+        useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `Teleporting to Boss Arena...` })
       } else {
         const senderName = characterConfig?.name || userProfile?.username || 'Unknown'
         socket.emit('chat_message', {
