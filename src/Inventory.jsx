@@ -16,7 +16,8 @@ export default function Inventory() {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      background: 'rgba(0,0,0,0.7)'
+      background: 'rgba(0,0,0,0.7)',
+      zIndex: 100
     }}>
       <div className="glass-panel" style={{
         width: '80%',
@@ -77,22 +78,22 @@ export default function Inventory() {
             inventory.map((item, idx) => (
               <div 
                 key={idx} 
-                draggable
-                onDragStart={(e) => e.dataTransfer.setData('skillId', item.id)}
+                draggable={true}
+                onDragStart={(e) => e.dataTransfer.setData('text/plain', item.id)}
                 onClick={() => item.type === 'consumable' ? consumeItem(item) : equipItem(item)} 
-                style={{
-                background: 'rgba(15, 23, 42, 0.6)',
-                border: `1px solid ${item.color}`,
-                borderRadius: '0.5rem',
-                padding: '1rem',
-                boxShadow: `0 0 15px ${item.color}40`,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}>
-                <div style={{ color: item.color, fontFamily: 'Orbitron', fontWeight: 'bold' }}>{item.name}</div>
+                style={{ 
+                  background: 'rgba(0,0,0,0.5)', 
+                  border: `1px solid ${item.color}88`, 
+                  borderRadius: '0.25rem', 
+                  padding: '1rem',
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: 'grab'
+                }}
+              >
+                <div style={{ color: item.color, fontWeight: 'bold', textAlign: 'center', fontSize: '0.9rem' }}>{item.name}</div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: {item.type === 'consumable' ? 'Consumable' : (item.id.includes('weapon') ? 'Weapon' : 'Armor')}</div>
                 <div style={{ color: 'white', fontWeight: 'bold' }}>{item.type === 'consumable' ? 'Effect' : 'Power'}: {item.power}</div>
                 <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '0.5rem' }}>

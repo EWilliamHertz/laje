@@ -104,10 +104,10 @@ export default function Character() {
     }
 
     // 1. Run ECS Game Logic in order
-    playerInputSystem(world)
-    combatSystem(world, delta, eid)
+    playerInputSystem(world, eid)
     enemyAISystem(world, eid, delta)
-    movementSystem(world, delta)
+    combatSystem(world, delta, eid)
+    movementSystem(world, delta, eid)
 
     // Health regen (passives) + resource regen
     if (!runtime.isDead && Health.current[eid] > 0) {

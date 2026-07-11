@@ -56,6 +56,38 @@ const areaConfigs = {
   hub: { floorColor: '#4ade80' }
 }
 
+// Placeholder for Quest NPC
+function CommanderVex() {
+  const meshRef = useRef()
+  const toggleQuestNPC = useStore(state => state.toggleQuestNPC)
+
+  useFrame((state) => {
+    meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.1 + 0.5
+  })
+
+  return (
+    <group position={[-5, 0, -2]}>
+      {/* Interaction zone */}
+      <mesh position={[0, 1, 0]} onClick={toggleQuestNPC}>
+        <boxGeometry args={[1, 2, 1]} />
+        <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={0.5} wireframe />
+      </mesh>
+      {/* Hologram base */}
+      <mesh position={[0, 0.1, 0]}>
+        <cylinderGeometry args={[1.5, 1.5, 0.2, 16]} />
+        <meshStandardMaterial color="#333" />
+      </mesh>
+      <pointLight position={[0, 2, 0]} color="#10b981" intensity={2} distance={5} />
+      <Text position={[0, 2.5, 0]} fontSize={0.3} color="#10b981" outlineWidth={0.02} outlineColor="#000">
+        CMDR VEX
+      </Text>
+      <Text position={[0, 2.2, 0]} fontSize={0.15} color="#cbd5e1">
+        [ MISSION GIVER ]
+      </Text>
+    </group>
+  )
+}
+
 export default function World() {
   const currentArea = useStore(state => state.currentArea)
   const setCurrentArea = useStore(state => state.setCurrentArea)
@@ -190,6 +222,9 @@ export default function World() {
       
       {/* --- HEALING FOUNTAIN --- */}
       <SpringFountain position={[0, 0, -10]} />
+      
+      {/* --- QUEST NPC --- */}
+      <CommanderVex />
     </group>
   )
 }

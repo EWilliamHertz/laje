@@ -12,7 +12,7 @@ import WorldMap from './WorldMap'
 import SkillTree from './SkillTree'
 import Inventory from './Inventory'
 import Merchant from './Merchant'
-import FriendsList from './FriendsList'
+import QuestNPC from './QuestNPC'
 import Multiplayer from './Multiplayer'
 import Chat from './Chat'
 import { useStore } from './store'
@@ -76,7 +76,7 @@ export default function App() {
             <SkillTree />
             <Inventory />
             <Merchant />
-            <FriendsList />
+            <QuestNPC />
             <Chat />
           </>
         )}

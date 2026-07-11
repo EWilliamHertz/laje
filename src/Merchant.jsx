@@ -29,7 +29,8 @@ export default function Merchant() {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      background: 'rgba(0,0,0,0.8)'
+      background: 'rgba(0,0,0,0.8)',
+      zIndex: 1000
     }}>
       <div className="glass-panel" style={{
         width: '60%',

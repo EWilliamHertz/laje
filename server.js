@@ -94,6 +94,29 @@ io.on('connection', (socket) => {
       }
     })
   })
+
+  // ── Duels ──
+  socket.on('duel_request', (targetUsername) => {
+    const target = Object.values(players).find(p => p.username.toLowerCase() === targetUsername.toLowerCase())
+    if (target) {
+      if (target.id === socket.id) return;
+      io.to(target.id).emit('duel_request', { id: socket.id, username: players[socket.id]?.username })
+    }
+  })
+
+  socket.on('duel_accept', (challengerId) => {
+    const challenger = players[challengerId]
+    const defender = players[socket.id]
+    if (challenger && defender) {
+      io.to(challenger.id).emit('duel_start', { id: defender.id, username: defender.username })
+      io.to(defender.id).emit('duel_start', { id: challenger.id, username: challenger.username })
+    }
+  })
+
+  socket.on('duel_hit', ({ targetId, damage }) => {
+    // Notify the target that they took damage from a duel
+    io.to(targetId).emit('duel_damage_received', damage)
+  })
 })
 
 // NeonDB connection

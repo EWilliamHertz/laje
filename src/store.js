@@ -45,6 +45,7 @@ export const useStore = create((set, get) => ({
   skillPoints: 0,
   unlockedSkills: [],
   hotbar: Array(10).fill(null),
+  keybinds: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'],
   inventory: [],
   equipped: { weapon: null, armor: null },
   friends: [],
@@ -54,7 +55,9 @@ export const useStore = create((set, get) => ({
   isMapOpen: false,
   isSkillTreeOpen: false,
   isInventoryOpen: false,
+  isCharacterOpen: false,
   isMerchantOpen: false,
+  isQuestNPCOpen: false,
   floatingTexts: [],
   triggeredSkill: null,
   lastSavedAt: null,
@@ -63,6 +66,12 @@ export const useStore = create((set, get) => ({
   party: [],        // Array of { id, username }
   partyInvites: [], // Array of { id, username }
   otherPlayers: {}, // Map of socket.id -> player state
+  
+  activeDuel: null, // { id, username }
+  duelRequests: [], // Array of { id, username }
+  
+  // ── Quests ─────────────────────────────────────────────────────────
+  activeQuest: null,     // { id, title, description, targetEnemyType, targetCount, currentCount, rewardXp, rewardCredits }
 
   // ── Auth ───────────────────────────────────────────────────────────
   login: (profile) => set({
@@ -94,9 +103,8 @@ export const useStore = create((set, get) => ({
     runtime.buffs = {}
     runtime.isDead = false
 
-    let loadedHotbar = parseJson(char.hotbar, Array(10).fill(null));
-    if (!Array.isArray(loadedHotbar)) loadedHotbar = Array(10).fill(null);
-    while (loadedHotbar.length < 10) loadedHotbar.push(null);
+    const loadedHotbar = parseJson(char.hotbar, Array(10).fill(null))
+    const loadedKeybinds = parseJson(char.keybinds, ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'])
 
     set({
       activeCharacter: char,
@@ -106,6 +114,7 @@ export const useStore = create((set, get) => ({
       currency: char.currency,
       unlockedSkills,
       hotbar: loadedHotbar,
+      keybinds: loadedKeybinds,
       inventory: parseJson(char.inventory, []),
       equipped,
       currentArea: position.area || 'hub',
@@ -126,7 +135,7 @@ export const useStore = create((set, get) => ({
       const characters = await api.getCharacters(userProfile.id)
       set({ characters })
     } catch { /* keep the stale roster */ }
-    set({ activeCharacter: null, characterConfig: null, isMapOpen: false, isSkillTreeOpen: false, isInventoryOpen: false, isMerchantOpen: false })
+    set({ activeCharacter: null, characterConfig: null, isMapOpen: false, isSkillTreeOpen: false, isInventoryOpen: false, isMerchantOpen: false, isQuestNPCOpen: false })
   },
 
   // ── Derived stats ──────────────────────────────────────────────────
@@ -155,8 +164,9 @@ export const useStore = create((set, get) => ({
         level: state.level,
         xp: state.xp,
         currency: state.currency,
-        unlockedSkills: state.unlockedSkills,
-        hotbar: state.hotbar,
+        unlockedSkills: JSON.stringify(state.unlockedSkills),
+        hotbar: JSON.stringify(state.hotbar),
+        keybinds: JSON.stringify(state.keybinds),
         inventory: state.inventory,
         equipped: state.equipped,
         position: { x: runtime.playerPos.x, z: runtime.playerPos.z, area: state.currentArea }
@@ -226,6 +236,38 @@ export const useStore = create((set, get) => ({
     })
     get().saveCharacter()
   },
+
+  updateKeybind: (index, code) => {
+    set(state => {
+      const newKeybinds = [...state.keybinds]
+      // if already bound, swap them
+      const existingIdx = newKeybinds.indexOf(code)
+      if (existingIdx !== -1) {
+        newKeybinds[existingIdx] = newKeybinds[index]
+      }
+      newKeybinds[index] = code
+      return { keybinds: newKeybinds }
+    })
+    get().saveCharacter()
+  },
+  
+  // ── Quests ─────────────────────────────────────────────────────────
+  acceptQuest: (quest) => set({ activeQuest: { ...quest, currentCount: 0 } }),
+  abandonQuest: () => set({ activeQuest: null }),
+  updateQuestProgress: (amount) => set(s => {
+    if (!s.activeQuest) return s;
+    const newCount = s.activeQuest.currentCount + amount;
+    if (newCount >= s.activeQuest.targetCount) {
+      // Quest Complete!
+      setTimeout(() => {
+        useStore.getState().addLoot(s.activeQuest.rewardXp, s.activeQuest.rewardCredits)
+        useStore.getState().addFloatingText(`QUEST COMPLETE!`, [0, 4, 0], '#fbbf24')
+        useStore.getState().abandonQuest()
+      }, 500)
+      return { activeQuest: { ...s.activeQuest, currentCount: s.activeQuest.targetCount } }
+    }
+    return { activeQuest: { ...s.activeQuest, currentCount: newCount } }
+  }),
 
   // ── Abilities ──────────────────────────────────────────────────────
   triggerSkill: (skillId) => {
@@ -326,9 +368,11 @@ export const useStore = create((set, get) => ({
   setArea: (areaId) => set({ currentArea: areaId, isMapOpen: false }),
   setCurrentArea: (areaId) => set({ currentArea: areaId, isMapOpen: false }),
   toggleMap: () => set(state => ({ isMapOpen: !state.isMapOpen })),
+  toggleCharacter: () => set(state => ({ isCharacterOpen: !state.isCharacterOpen, isInventoryOpen: false, isMerchantOpen: false, isQuestNPCOpen: false })),
+  toggleInventory: () => set(state => ({ isInventoryOpen: !state.isInventoryOpen, isCharacterOpen: false, isMerchantOpen: false, isQuestNPCOpen: false })),
+  toggleMerchant: () => set(state => ({ isMerchantOpen: !state.isMerchantOpen, isInventoryOpen: false, isCharacterOpen: false, isQuestNPCOpen: false })),
+  toggleQuestNPC: () => set(state => ({ isQuestNPCOpen: !state.isQuestNPCOpen, isInventoryOpen: false, isCharacterOpen: false, isMerchantOpen: false })),
   toggleSkillTree: () => set(state => ({ isSkillTreeOpen: !state.isSkillTreeOpen })),
-  toggleInventory: () => set(state => ({ isInventoryOpen: !state.isInventoryOpen })),
-  toggleMerchant: () => set(state => ({ isMerchantOpen: !state.isMerchantOpen })),
 
   addFloatingText: (text, position, color) => set(state => ({
     floatingTexts: [...state.floatingTexts, { id: Math.random(), text, position, color, createdAt: Date.now() }]
@@ -347,12 +391,19 @@ export const useStore = create((set, get) => ({
   // ── Party ──────────────────────────────────────────────────────────
   setParty: (party) => set({ party }),
   addPartyInvite: (invite) => set(state => {
-    // Only add if not already invited
     if (state.partyInvites.find(i => i.id === invite.id)) return state;
     return { partyInvites: [...state.partyInvites, invite] };
   }),
   removePartyInvite: (id) => set(state => ({ partyInvites: state.partyInvites.filter(i => i.id !== id) })),
   
+  // ── Duels ──────────────────────────────────────────────────────────
+  setActiveDuel: (duel) => set({ activeDuel: duel }),
+  addDuelRequest: (req) => set(state => {
+    if (state.duelRequests.find(r => r.id === req.id)) return state;
+    return { duelRequests: [...state.duelRequests, req] };
+  }),
+  removeDuelRequest: (id) => set(state => ({ duelRequests: state.duelRequests.filter(r => r.id !== id) })),
+
   // ── Network Players ────────────────────────────────────────────────
   setOtherPlayers: (players) => set({ otherPlayers: players }),
   updateOtherPlayer: (id, data) => set(state => ({ 

@@ -12,7 +12,7 @@ export default function FriendsList() {
         className="glass-panel"
         style={{
           position: 'absolute',
-          bottom: '8rem',
+          top: '6rem',
           right: '2rem',
           padding: '0.5rem 1rem',
           borderRadius: '0.5rem',
@@ -20,7 +20,8 @@ export default function FriendsList() {
           fontFamily: 'Orbitron',
           fontWeight: 'bold',
           cursor: 'pointer',
-          border: '1px solid #4ade80'
+          border: '1px solid #4ade80',
+          zIndex: 1000
         }}
       >
         👥 FRIENDS ({friends.length})
@@ -31,7 +32,7 @@ export default function FriendsList() {
   return (
     <div className="glass-panel" style={{
       position: 'absolute',
-      bottom: '8rem',
+      top: '6rem',
       right: '2rem',
       width: '300px',
       maxHeight: '400px',
@@ -39,7 +40,8 @@ export default function FriendsList() {
       color: 'white',
       display: 'flex',
       flexDirection: 'column',
-      border: '1px solid #4ade80'
+      border: '1px solid #4ade80',
+      zIndex: 1000
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <h3 style={{ margin: 0, fontFamily: 'Orbitron', color: '#4ade80' }}>FRIENDS LIST</h3>

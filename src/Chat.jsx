@@ -30,13 +30,34 @@ export default function Chat() {
       } else if (text.startsWith('/accept ')) {
         // Find invite from username
         const target = text.substring(8).trim()
-        const invite = useStore.getState().partyInvites.find(i => i.username.toLowerCase() === target.toLowerCase())
-        if (invite) {
-          socket.emit('party_accept', invite.id)
-          useStore.getState().removePartyInvite(invite.id)
+        const duelReq = useStore.getState().duelRequests.find(r => r.username.toLowerCase() === target.toLowerCase())
+        const partyInv = useStore.getState().partyInvites.find(i => i.username.toLowerCase() === target.toLowerCase())
+        
+        if (target.toLowerCase() === 'duel' || text.startsWith('/accept duel')) {
+          // If they typed "/accept duel [name]" or just "/accept duel"
+          const namePart = text.replace('/accept duel', '').trim()
+          let duelToAccept = null
+          if (namePart) {
+            duelToAccept = useStore.getState().duelRequests.find(r => r.username.toLowerCase() === namePart.toLowerCase())
+          } else {
+            duelToAccept = useStore.getState().duelRequests[0] // accept latest/first
+          }
+          if (duelToAccept) {
+            socket.emit('duel_accept', duelToAccept.id)
+            useStore.getState().removeDuelRequest(duelToAccept.id)
+          } else {
+            useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `No pending duel requests.` })
+          }
+        } else if (partyInv) {
+          socket.emit('party_accept', partyInv.id)
+          useStore.getState().removePartyInvite(partyInv.id)
         } else {
           useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `No invite from ${target}.` })
         }
+      } else if (text.startsWith('/duel ')) {
+        const target = text.substring(6).trim()
+        socket.emit('duel_request', target)
+        useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `Challenged ${target} to a duel...` })
       } else {
         const senderName = characterConfig?.name || userProfile?.username || 'Unknown'
         socket.emit('chat_message', {

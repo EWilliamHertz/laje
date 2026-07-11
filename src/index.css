@@ -429,3 +429,13 @@ body {
   backdrop-filter: blur(4px);
   border: 1px solid rgba(255,255,255,0.1);
 }
+
+/* UI Screens */
+.ui-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+}

@@ -61,6 +61,28 @@ export default function Multiplayer() {
         useStore.getState().addFloatingText(`+${xp} Party XP`, [0, 3, 0], '#fef08a')
       })
 
+      socket.on('duel_request', (sender) => {
+        useStore.getState().addDuelRequest(sender)
+        useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `${sender.username} challenged you to a duel! Type /accept duel` })
+      })
+
+      socket.on('duel_start', (opponent) => {
+        useStore.getState().setActiveDuel(opponent)
+        useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `DUEL STARTED against ${opponent.username}!` })
+        useStore.getState().addFloatingText(`DUEL: ${opponent.username}!`, [0, 4, 0], '#f87171')
+      })
+
+      socket.on('duel_damage_received', (damage) => {
+        const store = useStore.getState()
+        const newHp = Math.max(0, store.health - damage)
+        // Store health update doesn't exist directly, but we can set it via store.js... wait!
+        // The player's health is stored in ECS `Health.current[playerEid]`. We can't access ECS from Multiplayer.jsx easily unless we dispatch an action.
+        // Actually, store has an `applyDamage` or we can just add a global window event or Zustand action.
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('laje_duel_damage', { detail: damage }))
+        }
+      })
+
       return () => {
         socket.disconnect()
         socket.off('current_players')
@@ -71,6 +93,9 @@ export default function Multiplayer() {
         socket.off('party_invite')
         socket.off('party_update')
         socket.off('party_xp_received')
+        socket.off('duel_request')
+        socket.off('duel_start')
+        socket.off('duel_damage_received')
       }
     }
   }, [isLoggedIn, config, userProfile])

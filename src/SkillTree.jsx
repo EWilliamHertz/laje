@@ -19,7 +19,7 @@ export default function SkillTree() {
   }
 
   return (
-    <div className="ui-screen" style={{ background: 'rgba(2, 6, 23, 0.95)', padding: '2.5rem', pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
+    <div className="ui-screen" style={{ zIndex: 100, background: 'rgba(2, 6, 23, 0.95)', padding: '2.5rem', pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
       <button
         onClick={toggleSkillTree}
         style={{ position: 'absolute', top: '1.5rem', right: '2rem', background: 'none', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer' }}

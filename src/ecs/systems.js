@@ -12,8 +12,9 @@ function getDistance(x1, z1, x2, z2) {
   return Math.sqrt(dx * dx + dz * dz)
 }
 
-export function playerInputSystem(world) {
+export function playerInputSystem(world, playerEid) {
   for (const eid of query(world, [Position, Velocity, Rotation, PlayerControls])) {
+    if (eid !== playerEid) continue; // Ensure we only apply to player
     if (runtime.isDead) {
       Velocity.x[eid] = 0
       Velocity.z[eid] = 0
@@ -143,6 +144,10 @@ function damageEnemy(eid, amount, opts = {}) {
       store.addFloatingText(`${item.name} [${item.rarity}]`, [ex, 3.9, ez], item.color)
     }
 
+    if (store.activeQuest && store.activeQuest.targetEnemyType === typeIdx) {
+      store.updateQuestProgress(1)
+    }
+
     if (socket && socket.connected && store.party && store.party.length > 0) {
       socket.emit('party_xp', { party: store.party, xp: scaled.xp })
     }
@@ -268,12 +273,55 @@ export function combatSystem(world, delta, playerEid) {
         }
       }
     }
+
+    // PvP Duel Attack Logic
+    const activeDuel = store.activeDuel
+    if (activeDuel) {
+      const opponent = store.otherPlayers[activeDuel.id]
+      if (opponent && opponent.position) {
+        const dist = getDistance(px, pz, opponent.position[0], opponent.position[2])
+        if (dist < attackRange) {
+          const angleToEnemy = Math.atan2(opponent.position[0] - px, opponent.position[2] - pz)
+          let diff = angleToEnemy - pRot
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff))
+          if (Math.abs(diff) < Math.PI / 2) {
+            // Hit the opponent!
+            if (socket && socket.connected) {
+              socket.emit('duel_hit', { targetId: opponent.id, damage: dmg })
+            }
+            store.addFloatingText(`${dmg}`, [opponent.position[0], 2, opponent.position[2]], '#f87171')
+          }
+        }
+      }
+    }
   } else if (PlayerAttack.action[playerEid] > 1) {
     PlayerAttack.action[playerEid] = 0 // consume unknown legacy actions
   }
 }
 
-export function movementSystem(world, delta) {
+// Global listener for duel damage received
+if (typeof window !== 'undefined') {
+  window.addEventListener('laje_duel_damage', (e) => {
+    // We need to apply this to the player entity. We can just use the global store's addFloatingText
+    // But how to get playerEid? It's passed to combatSystem.
+    // Instead of doing it here, we can store pending duel damage on the runtime object.
+    if (!runtime.pendingDuelDamage) runtime.pendingDuelDamage = 0;
+    runtime.pendingDuelDamage += e.detail;
+  })
+}
+
+export function movementSystem(world, delta, playerEid) {
+  // Apply pending duel damage
+  if (playerEid !== null && runtime.pendingDuelDamage > 0) {
+    Health.current[playerEid] -= runtime.pendingDuelDamage
+    useStore.getState().addFloatingText(`-${runtime.pendingDuelDamage} (PVP)`, [Position.x[playerEid], 2.2, Position.z[playerEid]], '#f87171')
+    runtime.pendingDuelDamage = 0
+    if (Health.current[playerEid] <= 0 && !runtime.isDead) {
+      // Duel death
+      useStore.getState().setActiveDuel(null) // End duel on death
+    }
+  }
+
   for (const eid of query(world, [Position, Velocity])) {
     Position.x[eid] += Velocity.x[eid] * delta
     Position.y[eid] += Velocity.y[eid] * delta
