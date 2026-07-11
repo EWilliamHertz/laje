@@ -3,6 +3,7 @@ import { Position, Velocity, Rotation, PlayerControls, PlayerAttack, Enemy, Heal
 import { useStore, runtime, getBuffValue } from '../store'
 import { ABILITIES } from '../data/skills'
 import { ENEMY_TYPES, scaleEnemy, rollLoot } from '../data/items'
+import { socket } from '../Multiplayer'
 
 // Helper for 2D distance
 function getDistance(x1, z1, x2, z2) {
@@ -140,6 +141,10 @@ function damageEnemy(eid, amount, opts = {}) {
     if (item) {
       store.addInventoryItem(item)
       store.addFloatingText(`${item.name} [${item.rarity}]`, [ex, 3.9, ez], item.color)
+    }
+
+    if (socket && socket.connected && store.party && store.party.length > 0) {
+      socket.emit('party_xp', { party: store.party, xp: scaled.xp })
     }
   }
 }

@@ -35,6 +35,8 @@ io.on('connection', (socket) => {
       players[socket.id].isAttacking = data.isAttacking
       players[socket.id].isMoving = data.isMoving
       players[socket.id].level = data.level
+      players[socket.id].health = data.health
+      players[socket.id].maxHealth = data.maxHealth
       players[socket.id].equippedWeapon = data.equippedWeapon
       socket.broadcast.emit('player_moved', players[socket.id])
     }
@@ -48,8 +50,49 @@ io.on('connection', (socket) => {
 
   // ── Global Chat ──
   socket.on('chat_message', (msgData) => {
-    // msgData: { senderId, senderName, text, timestamp }
     io.emit('chat_message', msgData)
+  })
+
+  // ── Combat Sync ──
+  socket.on('enemy_hit', ({ enemyId, damage }) => {
+    socket.broadcast.emit('enemy_hit', { enemyId, damage, hitterId: socket.id })
+  })
+
+  socket.on('sync_enemies', (enemies) => {
+    socket.broadcast.emit('zone_enemies', enemies)
+  })
+
+  // ── Parties ──
+  socket.on('party_invite', (targetUsername) => {
+    const target = Object.values(players).find(p => p.username.toLowerCase() === targetUsername.toLowerCase())
+    if (target) {
+      if (target.id === socket.id) return; // Cannot invite self
+      io.to(target.id).emit('party_invite', { id: socket.id, username: players[socket.id]?.username })
+    }
+  })
+
+  socket.on('party_accept', (inviterId) => {
+    const inviter = players[inviterId]
+    const invitee = players[socket.id]
+    if (inviter && invitee) {
+      io.to(inviter.id).emit('party_update', [
+        { id: inviter.id, username: inviter.username },
+        { id: invitee.id, username: invitee.username }
+      ])
+      io.to(invitee.id).emit('party_update', [
+        { id: inviter.id, username: inviter.username },
+        { id: invitee.id, username: invitee.username }
+      ])
+    }
+  })
+
+  socket.on('party_xp', ({ party, xp }) => {
+    // broadcast xp to other party members
+    party.forEach(member => {
+      if (member.id !== socket.id) {
+        io.to(member.id).emit('party_xp_received', xp)
+      }
+    })
   })
 })
 

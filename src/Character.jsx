@@ -186,6 +186,8 @@ export default function Character() {
         isAttacking: PlayerAttack.cooldown[eid] > 0.25,
         isMoving: moving,
         level: store.level,
+        health: Health.current[eid],
+        maxHealth: Health.max[eid],
         equippedWeapon: w ? { model: w.model, rarity: w.rarity, color: w.color } : null
       })
     }

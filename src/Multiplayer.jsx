@@ -10,7 +10,7 @@ import { API_BASE } from './api'
 export const socket = io(API_BASE, { autoConnect: false })
 
 export default function Multiplayer() {
-  const [otherPlayers, setOtherPlayers] = useState({})
+  const otherPlayers = useStore(state => state.otherPlayers)
   const isLoggedIn = useStore(state => state.isLoggedIn)
   const config = useStore(state => state.characterConfig)
   const userProfile = useStore(state => state.userProfile)
@@ -27,27 +27,38 @@ export default function Multiplayer() {
       socket.on('current_players', (players) => {
         const others = { ...players }
         delete others[socket.id]
-        setOtherPlayers(others)
+        useStore.getState().setOtherPlayers(others)
       })
 
       socket.on('player_joined', (player) => {
-        setOtherPlayers(prev => ({ ...prev, [player.id]: player }))
+        useStore.getState().updateOtherPlayer(player.id, player)
       })
 
       socket.on('player_moved', (player) => {
-        setOtherPlayers(prev => ({ ...prev, [player.id]: player }))
+        useStore.getState().updateOtherPlayer(player.id, player)
       })
 
       socket.on('player_left', (id) => {
-        setOtherPlayers(prev => {
-          const newPlayers = { ...prev }
-          delete newPlayers[id]
-          return newPlayers
-        })
+        useStore.getState().removeOtherPlayer(id)
       })
 
       socket.on('chat_message', (msg) => {
         useStore.getState().addChatMessage(msg)
+      })
+
+      socket.on('party_invite', (sender) => {
+        useStore.getState().addPartyInvite(sender)
+        useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `${sender.username} invited you to a party. Type /accept ${sender.username}` })
+      })
+
+      socket.on('party_update', (partyMembers) => {
+        useStore.getState().setParty(partyMembers)
+        useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `Party updated!` })
+      })
+
+      socket.on('party_xp_received', (xp) => {
+        useStore.getState().addLoot(xp, 0)
+        useStore.getState().addFloatingText(`+${xp} Party XP`, [0, 3, 0], '#fef08a')
       })
 
       return () => {
@@ -57,6 +68,9 @@ export default function Multiplayer() {
         socket.off('player_moved')
         socket.off('player_left')
         socket.off('chat_message')
+        socket.off('party_invite')
+        socket.off('party_update')
+        socket.off('party_xp_received')
       }
     }
   }, [isLoggedIn, config, userProfile])

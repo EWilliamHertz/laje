@@ -60,6 +60,9 @@ export const useStore = create((set, get) => ({
   lastSavedAt: null,
   saveState: 'idle', // idle | saving | saved | error
   chatMessages: [],
+  party: [],        // Array of { id, username }
+  partyInvites: [], // Array of { id, username }
+  otherPlayers: {}, // Map of socket.id -> player state
 
   // ── Auth ───────────────────────────────────────────────────────────
   login: (profile) => set({
@@ -339,5 +342,25 @@ export const useStore = create((set, get) => ({
     const newChat = [...state.chatMessages, msg];
     if (newChat.length > 50) newChat.shift(); // Keep max 50 messages
     return { chatMessages: newChat };
+  }),
+
+  // ── Party ──────────────────────────────────────────────────────────
+  setParty: (party) => set({ party }),
+  addPartyInvite: (invite) => set(state => {
+    // Only add if not already invited
+    if (state.partyInvites.find(i => i.id === invite.id)) return state;
+    return { partyInvites: [...state.partyInvites, invite] };
+  }),
+  removePartyInvite: (id) => set(state => ({ partyInvites: state.partyInvites.filter(i => i.id !== id) })),
+  
+  // ── Network Players ────────────────────────────────────────────────
+  setOtherPlayers: (players) => set({ otherPlayers: players }),
+  updateOtherPlayer: (id, data) => set(state => ({ 
+    otherPlayers: { ...state.otherPlayers, [id]: { ...state.otherPlayers[id], ...data } }
+  })),
+  removeOtherPlayer: (id) => set(state => {
+    const newPlayers = { ...state.otherPlayers };
+    delete newPlayers[id];
+    return { otherPlayers: newPlayers };
   })
 }))

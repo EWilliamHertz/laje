@@ -294,6 +294,46 @@ const Minimap = memo(function Minimap() {
   return <canvas ref={canvasRef} width={160} height={160} style={{ display: 'block' }} />
 })
 
+// ── Party UI ────────────────────────────────────────────────────────────
+const PartyHUD = memo(function PartyHUD() {
+  const party = useStore(s => s.party)
+  const otherPlayers = useStore(s => s.otherPlayers)
+
+  if (!party || party.length === 0) return null
+
+  return (
+    <div style={{ position: 'absolute', top: '4rem', left: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', pointerEvents: 'auto' }}>
+      {party.map((member, i) => {
+        // Find their live health from otherPlayers
+        const liveData = otherPlayers[member.id]
+        const hp = liveData?.health ?? 100
+        const maxHp = liveData?.maxHealth ?? 100
+        const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100))
+
+        return (
+          <div key={i} style={{
+            background: 'rgba(2,6,23,0.7)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(96,165,250,0.5)', borderRadius: '0.4rem',
+            padding: '0.5rem', width: '180px', display: 'flex', flexDirection: 'column', gap: '0.3rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontFamily: 'Orbitron', fontSize: '0.7rem', color: '#60a5fa', fontWeight: 'bold' }}>
+                {member.username}
+              </div>
+              <div style={{ fontFamily: 'Orbitron', fontSize: '0.55rem', color: '#94a3b8' }}>
+                {Math.floor(hp)} / {Math.floor(maxHp)}
+              </div>
+            </div>
+            <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: '#10b981', transition: 'width 0.2s' }} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+})
+
 // ── Top bar: identity, credits, save status, buttons ────────────────────
 const TopBar = memo(function TopBar() {
   const name = useStore(s => s.characterConfig?.name)
@@ -347,6 +387,7 @@ export default function Hud() {
   return (
     <>
       <TopBar />
+      <PartyHUD />
 
       {/* Bottom combat cluster: orb — action bar + xp — orb */}
       <div style={{

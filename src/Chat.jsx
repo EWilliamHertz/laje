@@ -21,13 +21,31 @@ export default function Chat() {
   const handleSubmit = (e) => {
     if (e && e.preventDefault) e.preventDefault()
     if (inputText.trim() && socket.connected) {
-      const senderName = characterConfig?.name || userProfile?.username || 'Unknown'
-      socket.emit('chat_message', {
-        senderId: socket.id,
-        senderName: senderName,
-        text: inputText.trim(),
-        timestamp: Date.now()
-      })
+      const text = inputText.trim()
+      
+      if (text.startsWith('/invite ')) {
+        const target = text.substring(8).trim()
+        socket.emit('party_invite', target)
+        useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `Inviting ${target} to party...` })
+      } else if (text.startsWith('/accept ')) {
+        // Find invite from username
+        const target = text.substring(8).trim()
+        const invite = useStore.getState().partyInvites.find(i => i.username.toLowerCase() === target.toLowerCase())
+        if (invite) {
+          socket.emit('party_accept', invite.id)
+          useStore.getState().removePartyInvite(invite.id)
+        } else {
+          useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `No invite from ${target}.` })
+        }
+      } else {
+        const senderName = characterConfig?.name || userProfile?.username || 'Unknown'
+        socket.emit('chat_message', {
+          senderId: socket.id,
+          senderName: senderName,
+          text: text,
+          timestamp: Date.now()
+        })
+      }
       setInputText('')
     }
     setIsTyping(false)
