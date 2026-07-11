@@ -1,8 +1,14 @@
-import ngrok from 'ngrok'
-
 const token = process.env.NGROK_AUTHTOKEN
 if (!token) {
   console.error('Set NGROK_AUTHTOKEN before starting the tunnel.')
+  process.exit(1)
+}
+
+let ngrok
+try {
+  ;({ default: ngrok } = await import('ngrok'))
+} catch {
+  console.error('The ngrok dependency is not installed. Run `npm install` in the Laje folder, then retry `npm run tunnel`.')
   process.exit(1)
 }
 
