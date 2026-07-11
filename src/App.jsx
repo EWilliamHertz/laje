@@ -32,6 +32,7 @@ export default function App() {
   useEffect(() => {
     if (!characterConfig) return
     const handleKeyDown = (e) => {
+      if (document.activeElement?.tagName === 'INPUT') return;
       if (e.code === 'KeyM') toggleMap()
       if (e.code === 'KeyK') toggleSkillTree()
       if (e.code === 'KeyI') toggleInventory()

@@ -19,7 +19,7 @@ export default function Chat() {
   }, [chatMessages])
 
   const handleSubmit = (e) => {
-    if (e) e.preventDefault()
+    if (e && e.preventDefault) e.preventDefault()
     if (inputText.trim() && socket.connected) {
       const senderName = characterConfig?.name || userProfile?.username || 'Unknown'
       socket.emit('chat_message', {
@@ -29,9 +29,10 @@ export default function Chat() {
         timestamp: Date.now()
       })
       setInputText('')
-      setIsTyping(false)
-    } else {
-      setIsTyping(false)
+    }
+    setIsTyping(false)
+    if (document.activeElement?.tagName === 'INPUT') {
+      document.activeElement.blur()
     }
   }
 
@@ -39,22 +40,24 @@ export default function Chat() {
     // Global hotkey to focus chat when pressing Enter
     const handleKeyDown = (e) => {
       // Don't intercept if they are typing in another input field (like login)
-      if (document.activeElement.tagName === 'INPUT' && !isTyping) return;
+      if (document.activeElement?.tagName === 'INPUT' && !isTyping) return;
 
       if (e.key === 'Enter') {
         if (!isTyping) {
           e.preventDefault()
           setIsTyping(true)
-        } else {
-          handleSubmit(e)
         }
+        // If they ARE typing, the <form onSubmit> handles the submission!
       } else if (e.key === 'Escape' && isTyping) {
         setIsTyping(false)
+        if (document.activeElement?.tagName === 'INPUT') {
+          document.activeElement.blur()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isTyping, inputText])
+  }, [isTyping])
 
   return (
     <div style={{

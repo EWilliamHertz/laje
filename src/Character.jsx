@@ -14,6 +14,7 @@ function usePlayerECSInput(eid) {
   useEffect(() => {
     if (eid === null) return
     const handleKeyDown = (e) => {
+      if (document.activeElement?.tagName === 'INPUT') return;
       switch (e.code) {
         case 'KeyW': PlayerControls.forward[eid] = 1; break;
         case 'KeyS': PlayerControls.backward[eid] = 1; break;
