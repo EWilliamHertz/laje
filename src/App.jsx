@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { OrthographicCamera } from '@react-three/drei'
+import { OrthographicCamera, Loader } from '@react-three/drei'
 import { Suspense, useEffect } from 'react'
 import World from './World'
 import Character from './Character'
@@ -110,6 +110,16 @@ export default function App() {
             <FloatingTexts />
           </Suspense>
         </Canvas>
+      )}
+
+      {isLoggedIn && characterConfig && (
+        <Loader
+          containerStyles={{ background: 'radial-gradient(ellipse at center, #0a1628 0%, #020617 100%)' }}
+          innerStyles={{ background: '#0f172a', width: 260, height: 6, borderRadius: 3 }}
+          barStyles={{ background: 'linear-gradient(90deg, #22d3ee, #10b981)', height: 6, borderRadius: 3 }}
+          dataStyles={{ color: '#67e8f9', fontFamily: 'monospace', fontSize: 13, letterSpacing: '0.2em', marginTop: 12 }}
+          dataInterpolation={(p) => `ENTERING THE NEXUS… ${p.toFixed(0)}%`}
+        />
       )}
     </>
   )

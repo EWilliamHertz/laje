@@ -62,13 +62,14 @@ function CommanderVex() {
   const toggleQuestNPC = useStore(state => state.toggleQuestNPC)
 
   useFrame((state) => {
-    meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.1 + 0.5
+    if (!meshRef.current) return
+    meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.1 + 1
   })
 
   return (
     <group position={[-5, 0, -2]}>
       {/* Interaction zone */}
-      <mesh position={[0, 1, 0]} onClick={toggleQuestNPC}>
+      <mesh ref={meshRef} position={[0, 1, 0]} onClick={toggleQuestNPC}>
         <boxGeometry args={[1, 2, 1]} />
         <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={0.5} wireframe />
       </mesh>
