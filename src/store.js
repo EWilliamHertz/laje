@@ -251,6 +251,29 @@ export const useStore = create((set, get) => ({
     get().saveCharacter()
   },
 
+  consumeItem: (item) => {
+    set(state => {
+      if (item.type === 'consumable') {
+        if (item.effect === 'heal') {
+          // Because updateHealth uses state updater, we can just call it
+          // Wait, updateHealth is a separate function, we can call it outside set
+        }
+        const newInv = [...state.inventory]
+        const idx = newInv.findIndex(i => i.id === item.id)
+        if (idx !== -1) newInv.splice(idx, 1)
+        return { inventory: newInv }
+      }
+      return state
+    })
+    
+    if (item.type === 'consumable' && item.effect === 'heal') {
+      get().updateHealth(item.power)
+      get().addFloatingText(`+${item.power} HP`, [runtime.playerPos.x, 2.5, runtime.playerPos.z], '#22c55e')
+    }
+    
+    get().saveCharacter()
+  },
+
   buyItem: (item, cost) => {
     const state = get()
     if (state.currency < cost) return

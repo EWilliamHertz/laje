@@ -2,8 +2,53 @@ import { useRef, useMemo } from 'react'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { Billboard, Text } from '@react-three/drei'
-import { useStore } from './store'
 import { useFrame } from '@react-three/fiber'
+import { runtime, useStore } from './store'
+
+function SpringFountain({ position }) {
+  const updateHealth = useStore(state => state.updateHealth)
+  const addFloatingText = useStore(state => state.addFloatingText)
+  const lastHeal = useRef(0)
+
+  useFrame(() => {
+    const px = runtime.playerPos.x
+    const pz = runtime.playerPos.z
+    const dx = px - position[0]
+    const dz = pz - position[2]
+    const distSq = dx*dx + dz*dz
+    
+    if (distSq < 25) { // 5 radius
+      const now = Date.now()
+      if (now - lastHeal.current > 1000) {
+        lastHeal.current = now
+        const s = useStore.getState()
+        if (s.health < s.maxHealth) {
+          updateHealth(5)
+          addFloatingText('+5 HP', [px, 2.5, pz], '#22c55e')
+        }
+      }
+    }
+  })
+
+  return (
+    <group position={position}>
+      <mesh castShadow receiveShadow>
+        <cylinderGeometry args={[2, 2.5, 0.5, 16]} />
+        <meshStandardMaterial color="#cbd5e1" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.5, 0]}>
+        <cylinderGeometry args={[1.5, 1.5, 0.1, 16]} />
+        <meshStandardMaterial color="#06b6d4" emissive="#06b6d4" emissiveIntensity={0.5} transparent opacity={0.8} />
+      </mesh>
+      <pointLight color="#06b6d4" intensity={2} distance={10} position={[0, 2, 0]} />
+      <Billboard position={[0, 3, 0]}>
+        <Text fontSize={0.5} color="#22c55e" outlineWidth={0.05} outlineColor="black">
+          HEALING SPRING
+        </Text>
+      </Billboard>
+    </group>
+  )
+}
 
 const areaConfigs = {
   cyber_forest: { floorColor: '#0f172a' },
@@ -142,6 +187,9 @@ export default function World() {
           </Text>
         </Billboard>
       </group>
+      
+      {/* --- HEALING FOUNTAIN --- */}
+      <SpringFountain position={[0, 0, -10]} />
     </group>
   )
 }

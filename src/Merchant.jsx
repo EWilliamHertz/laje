@@ -15,11 +15,12 @@ export default function Merchant() {
 
   // Curated shop inventory (tiers drive the in-hand 3D model glow)
   const shopItems = [
-    { id: 'weapon_shop_1', slot: 'weapon', model: 'sword', name: 'Laser Katana', rarity: 'Rare', color: '#3b82f6', power: 45, cost: 500, value: 112 },
-    { id: 'weapon_shop_2', slot: 'weapon', model: 'cannon', name: 'Plasma Cannon', rarity: 'Epic', color: '#a855f7', power: 85, cost: 1200, value: 212 },
-    { id: 'weapon_shop_3', slot: 'weapon', model: 'staff', name: 'Ley Conductor', rarity: 'Epic', color: '#a855f7', power: 80, cost: 1100, value: 200 },
-    { id: 'armor_shop_1', slot: 'armor', name: 'Nanoweave Suit', rarity: 'Rare', color: '#3b82f6', power: 50, cost: 600, value: 125 },
-    { id: 'armor_shop_2', slot: 'armor', name: 'Aegis Exoskeleton', rarity: 'Legendary', color: '#f59e0b', power: 150, cost: 3000, value: 375 },
+    { id: 'weapon_shop_1', type: 'equipment', slot: 'weapon', model: 'sword', name: 'Laser Katana', rarity: 'Rare', color: '#3b82f6', power: 45, cost: 500, value: 112 },
+    { id: 'weapon_shop_2', type: 'equipment', slot: 'weapon', model: 'cannon', name: 'Plasma Cannon', rarity: 'Epic', color: '#a855f7', power: 85, cost: 1200, value: 212 },
+    { id: 'weapon_shop_3', type: 'equipment', slot: 'weapon', model: 'staff', name: 'Ley Conductor', rarity: 'Epic', color: '#a855f7', power: 80, cost: 1100, value: 200 },
+    { id: 'armor_shop_1', type: 'equipment', slot: 'armor', name: 'Nanoweave Suit', rarity: 'Rare', color: '#3b82f6', power: 50, cost: 600, value: 125 },
+    { id: 'armor_shop_2', type: 'equipment', slot: 'armor', name: 'Aegis Exoskeleton', rarity: 'Legendary', color: '#f59e0b', power: 150, cost: 3000, value: 375 },
+    { id: 'potion_heal_1', type: 'consumable', effect: 'heal', name: 'Nanite Injector (Heal)', rarity: 'Common', color: '#22c55e', power: 50, cost: 25, value: 5 },
   ]
 
   return (
@@ -88,8 +89,8 @@ export default function Merchant() {
                 gap: '0.5rem'
               }}>
                 <div style={{ color: item.color, fontFamily: 'Orbitron', fontWeight: 'bold' }}>{item.name}</div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: {item.id.includes('weapon') ? 'Weapon' : 'Armor'}</div>
-                <div style={{ color: 'white', fontWeight: 'bold' }}>Power: {item.power}</div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: {item.type === 'consumable' ? 'Consumable' : (item.id.includes('weapon') ? 'Weapon' : 'Armor')}</div>
+                <div style={{ color: 'white', fontWeight: 'bold' }}>{item.type === 'consumable' ? 'Effect' : 'Power'}: {item.power}</div>
                 <button 
                   onClick={() => buyItem(item, item.cost)}
                   disabled={currency < item.cost}
@@ -126,8 +127,8 @@ export default function Merchant() {
                     gap: '0.5rem'
                   }}>
                     <div style={{ color: item.color, fontFamily: 'Orbitron', fontWeight: 'bold' }}>{item.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: {item.id.includes('weapon') ? 'Weapon' : 'Armor'}</div>
-                    <div style={{ color: 'white', fontWeight: 'bold' }}>Power: {item.power}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: {item.type === 'consumable' ? 'Consumable' : (item.id.includes('weapon') ? 'Weapon' : 'Armor')}</div>
+                    <div style={{ color: 'white', fontWeight: 'bold' }}>{item.type === 'consumable' ? 'Effect' : 'Power'}: {item.power}</div>
                     <button 
                       onClick={() => sellItem(item)}
                       style={{ 

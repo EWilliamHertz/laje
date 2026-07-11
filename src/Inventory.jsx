@@ -6,6 +6,7 @@ export default function Inventory() {
   const inventory = useStore(state => state.inventory) || []
   const equipped = useStore(state => state.equipped) || { weapon: null, armor: null }
   const equipItem = useStore(state => state.equipItem)
+  const consumeItem = useStore(state => state.consumeItem)
 
   if (!isInventoryOpen) return null
 
@@ -74,7 +75,7 @@ export default function Inventory() {
             </div>
           ) : (
             inventory.map((item, idx) => (
-              <div key={idx} onClick={() => equipItem(item)} style={{
+              <div key={idx} onClick={() => item.type === 'consumable' ? consumeItem(item) : equipItem(item)} style={{
                 background: 'rgba(15, 23, 42, 0.6)',
                 border: `1px solid ${item.color}`,
                 borderRadius: '0.5rem',
@@ -87,9 +88,11 @@ export default function Inventory() {
                 transition: 'all 0.2s ease'
               }}>
                 <div style={{ color: item.color, fontFamily: 'Orbitron', fontWeight: 'bold' }}>{item.name}</div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: {item.id.includes('weapon') ? 'Weapon' : 'Armor'}</div>
-                <div style={{ color: 'white', fontWeight: 'bold' }}>Power: {item.power}</div>
-                <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '0.5rem' }}>CLICK TO EQUIP</div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: {item.type === 'consumable' ? 'Consumable' : (item.id.includes('weapon') ? 'Weapon' : 'Armor')}</div>
+                <div style={{ color: 'white', fontWeight: 'bold' }}>{item.type === 'consumable' ? 'Effect' : 'Power'}: {item.power}</div>
+                <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '0.5rem' }}>
+                  {item.type === 'consumable' ? 'CLICK TO USE' : 'CLICK TO EQUIP'}
+                </div>
               </div>
             ))
           )}
