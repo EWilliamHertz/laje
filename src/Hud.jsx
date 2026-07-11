@@ -507,7 +507,7 @@ export default function Hud() {
 
       {/* Side Action Bar */}
       <div style={{
-        position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'auto'
+        position: 'absolute', right: '1rem', top: 'auto', bottom: '7rem', pointerEvents: 'auto'
       }}>
         <ActionBarGroup startIdx={5} endIdx={10} vertical={true} />
       </div>
