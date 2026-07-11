@@ -7,10 +7,12 @@ import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
 
 // Setup global socket connection
-let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-baseUrl = baseUrl.trim()
-if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`
-baseUrl = baseUrl.replace(/\/$/, '')
+let baseUrl = import.meta.env.VITE_API_URL || ''
+if (baseUrl) {
+  baseUrl = baseUrl.trim()
+  if (!baseUrl.startsWith('http') && !baseUrl.startsWith('/')) baseUrl = `https://${baseUrl}`
+  baseUrl = baseUrl.replace(/\/$/, '')
+}
 
 export const socket = io(baseUrl, { autoConnect: false })
 

@@ -80,10 +80,12 @@ export const useStore = create((set) => ({
   saveProgress: async () => {
     const state = get()
     if (!state.userProfile) return
-    let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-    baseUrl = baseUrl.trim()
-    if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`
-    baseUrl = baseUrl.replace(/\/$/, '')
+    let baseUrl = import.meta.env.VITE_API_URL || ''
+    if (baseUrl) {
+      baseUrl = baseUrl.trim()
+      if (!baseUrl.startsWith('http') && !baseUrl.startsWith('/')) baseUrl = `https://${baseUrl}`
+      baseUrl = baseUrl.replace(/\/$/, '')
+    }
     
     fetch(`${baseUrl}/api/save`, {
       method: 'POST',
