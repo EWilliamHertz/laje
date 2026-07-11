@@ -9,7 +9,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "tunnel": "ngrok http 5173"
+    "tunnel": "node start-ngrok.js"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
