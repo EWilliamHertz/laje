@@ -83,6 +83,14 @@ export default function Multiplayer() {
         }
       })
 
+      socket.on('duel_end', ({ won, opponent }) => {
+        useStore.getState().setActiveDuel(null)
+        if (won) {
+          useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: `🏆 VICTORY! You defeated ${opponent} in a duel!` })
+          useStore.getState().addFloatingText('DUEL WON!', [0, 4, 0], '#fcd34d')
+        }
+      })
+
       return () => {
         socket.disconnect()
         socket.off('current_players')
@@ -96,6 +104,7 @@ export default function Multiplayer() {
         socket.off('duel_request')
         socket.off('duel_start')
         socket.off('duel_damage_received')
+        socket.off('duel_end')
       }
     }
   }, [isLoggedIn, config, userProfile])

@@ -117,6 +117,21 @@ io.on('connection', (socket) => {
     // Notify the target that they took damage from a duel
     io.to(targetId).emit('duel_damage_received', damage)
   })
+
+  socket.on('duel_defeat', ({ winnerId }) => {
+    const loser = players[socket.id]
+    const winner = players[winnerId]
+    if (winner) {
+      io.to(winnerId).emit('duel_end', { won: true, opponent: loser?.username || 'Unknown' })
+    }
+    // Announce the outcome to everyone in the zone
+    io.emit('chat_message', {
+      senderId: 'SYSTEM',
+      senderName: 'SYSTEM',
+      text: `⚔️ ${winner?.username || 'A duelist'} has defeated ${loser?.username || 'their opponent'} in a duel!`,
+      timestamp: Date.now()
+    })
+  })
 })
 
 // NeonDB connection

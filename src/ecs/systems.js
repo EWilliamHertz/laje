@@ -317,8 +317,14 @@ export function movementSystem(world, delta, playerEid) {
     useStore.getState().addFloatingText(`-${runtime.pendingDuelDamage} (PVP)`, [Position.x[playerEid], 2.2, Position.z[playerEid]], '#f87171')
     runtime.pendingDuelDamage = 0
     if (Health.current[playerEid] <= 0 && !runtime.isDead) {
-      // Duel death
-      useStore.getState().setActiveDuel(null) // End duel on death
+      // Duel death — concede to the opponent and reset to 1 HP (duels are not lethal)
+      const duel = useStore.getState().activeDuel
+      if (duel && socket && socket.connected) {
+        socket.emit('duel_defeat', { winnerId: duel.id })
+      }
+      Health.current[playerEid] = 1
+      useStore.getState().setActiveDuel(null)
+      useStore.getState().addChatMessage({ senderName: 'SYSTEM', text: duel ? `You were defeated in a duel by ${duel.username}!` : 'You were defeated in a duel!' })
     }
   }
 
