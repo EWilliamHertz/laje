@@ -13,12 +13,13 @@ export default function Merchant() {
 
   if (!isMerchantOpen) return null
 
-  // Procedurally generated shop inventory
+  // Curated shop inventory (tiers drive the in-hand 3D model glow)
   const shopItems = [
-    { id: 'weapon_shop_1', name: 'Laser Katana', rarity: 'Rare', color: '#3b82f6', power: 45, cost: 500 },
-    { id: 'weapon_shop_2', name: 'Plasma Cannon', rarity: 'Epic', color: '#a855f7', power: 85, cost: 1200 },
-    { id: 'armor_shop_1', name: 'Nanoweave Suit', rarity: 'Rare', color: '#3b82f6', power: 50, cost: 600 },
-    { id: 'armor_shop_2', name: 'Aegis Exoskeleton', rarity: 'Legendary', color: '#f59e0b', power: 150, cost: 3000 },
+    { id: 'weapon_shop_1', slot: 'weapon', model: 'sword', name: 'Laser Katana', rarity: 'Rare', color: '#3b82f6', power: 45, cost: 500, value: 112 },
+    { id: 'weapon_shop_2', slot: 'weapon', model: 'cannon', name: 'Plasma Cannon', rarity: 'Epic', color: '#a855f7', power: 85, cost: 1200, value: 212 },
+    { id: 'weapon_shop_3', slot: 'weapon', model: 'staff', name: 'Ley Conductor', rarity: 'Epic', color: '#a855f7', power: 80, cost: 1100, value: 200 },
+    { id: 'armor_shop_1', slot: 'armor', name: 'Nanoweave Suit', rarity: 'Rare', color: '#3b82f6', power: 50, cost: 600, value: 125 },
+    { id: 'armor_shop_2', slot: 'armor', name: 'Aegis Exoskeleton', rarity: 'Legendary', color: '#f59e0b', power: 150, cost: 3000, value: 375 },
   ]
 
   return (

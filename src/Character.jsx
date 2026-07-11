@@ -4,8 +4,10 @@ import { addEntity, removeEntity, addComponent } from 'bitecs'
 import * as THREE from 'three'
 import { world, Position, Velocity, Rotation, PlayerControls, PlayerAttack, Health } from './ecs/world'
 import { playerInputSystem, movementSystem, enemyAISystem, combatSystem } from './ecs/systems'
-import { useStore } from './store'
-import CharacterModel from './CharacterModel'
+import { useStore, runtime } from './store'
+import { CLASS_STATS } from './data/progression'
+import { ABILITIES } from './data/skills'
+import ClassModel from './ClassModel'
 import { socket } from './Multiplayer'
 
 function usePlayerECSInput(eid) {
@@ -17,7 +19,7 @@ function usePlayerECSInput(eid) {
         case 'KeyS': PlayerControls.backward[eid] = 1; break;
         case 'KeyA': PlayerControls.left[eid] = 1; break;
         case 'KeyD': PlayerControls.right[eid] = 1; break;
-        case 'KeyJ': PlayerAttack.action[eid] = 1; break; // Melee Attack
+        case 'KeyJ': case 'Space': PlayerAttack.action[eid] = 1; break; // Basic Attack
       }
     }
     const handleKeyUp = (e) => {
@@ -42,138 +44,167 @@ export default function Character() {
   const setHealth = useStore(state => state.setHealth)
   const currentArea = useStore(state => state.currentArea)
   const groupRef = useRef()
-  const modelRef = useRef()
   const [eid, setEid] = useState(null)
-  
+  const [anim, setAnim] = useState('idle')
+  const animRef = useRef({ value: 'idle', abilityAnim: null, abilityUntil: 0, respawnAt: 0 })
+
   useEffect(() => {
     const newEid = addEntity(world)
     setEid(newEid)
-    
+
     addComponent(world, newEid, Position)
     addComponent(world, newEid, Velocity)
     addComponent(world, newEid, Rotation)
     addComponent(world, newEid, PlayerControls)
     addComponent(world, newEid, PlayerAttack)
     addComponent(world, newEid, Health)
-    
-    Position.x[newEid] = 0
+
+    const s = useStore.getState()
+    Position.x[newEid] = runtime.playerPos.x
     Position.y[newEid] = 0
-    Position.z[newEid] = 0
-    Health.current[newEid] = 100
-    Health.max[newEid] = 100
-    
+    Position.z[newEid] = runtime.playerPos.z
+    Health.current[newEid] = s.health
+    Health.max[newEid] = s.maxHealth
+
     return () => {
       removeEntity(world, newEid)
     }
   }, [currentArea])
-  
+
   usePlayerECSInput(eid)
+
+  // Ability animation cues (attack/spin/cast flourishes)
+  useEffect(() => {
+    return useStore.subscribe((state, prev) => {
+      if (state.triggeredSkill && state.triggeredSkill !== prev.triggeredSkill) {
+        const a = ABILITIES[state.triggeredSkill]
+        if (a?.anim) {
+          animRef.current.abilityAnim = a.anim
+          animRef.current.abilityUntil = Date.now() + 600
+        }
+      }
+    })
+  }, [])
 
   useFrame((state, delta) => {
     if (!groupRef.current || eid === null) return
-    
+    const store = useStore.getState()
+
+    // Keep ECS max health in sync with derived stats (level ups, gear swaps)
+    if (Health.max[eid] !== store.maxHealth) {
+      const diff = store.maxHealth - Health.max[eid]
+      Health.max[eid] = store.maxHealth
+      if (diff > 0) Health.current[eid] = Math.min(store.maxHealth, Health.current[eid] + diff)
+      else Health.current[eid] = Math.min(store.maxHealth, Health.current[eid])
+    }
+    if (runtime.pendingFullHeal) {
+      runtime.pendingFullHeal = false
+      Health.current[eid] = Health.max[eid]
+    }
+
     // 1. Run ECS Game Logic in order
     playerInputSystem(world)
     combatSystem(world, delta, eid)
-    enemyAISystem(world, eid)
+    enemyAISystem(world, eid, delta)
     movementSystem(world, delta)
-    
-    // Sync Health to UI
-    const currentHealth = Math.max(0, Math.floor(Health.current[eid]))
-    setHealth(currentHealth)
-    
+
+    // Health regen (passives) + resource regen
+    if (!runtime.isDead && Health.current[eid] > 0) {
+      Health.current[eid] = Math.min(Health.max[eid], Health.current[eid] + store.stats.healthRegen * delta)
+    }
+    store.tickRegen(delta)
+
+    // Death & respawn
+    if (Health.current[eid] <= 0 && !runtime.isDead) {
+      runtime.isDead = true
+      animRef.current.respawnAt = Date.now() + 4000
+      store.addFloatingText('SYSTEMS CRITICAL — REBOOTING', [Position.x[eid], 3, Position.z[eid]], '#ef4444')
+      store.saveCharacter()
+    }
+    if (runtime.isDead && Date.now() > animRef.current.respawnAt) {
+      runtime.isDead = false
+      Position.x[eid] = 0
+      Position.z[eid] = 0
+      Health.current[eid] = Health.max[eid]
+      useStore.getState().updateResource(9999)
+    }
+
+    // Sync Health to UI (store only re-renders subscribers when value changes)
+    setHealth(Math.max(0, Math.floor(Health.current[eid])))
+
     groupRef.current.position.set(Position.x[eid], Position.y[eid], Position.z[eid])
-    
-    // Smoothly rotate the character model to face the movement direction
-    // Instead of snapping, we use slerp/lerp for a better feel
+    runtime.playerPos.x = Position.x[eid]
+    runtime.playerPos.z = Position.z[eid]
+
+    // Smoothly rotate the character model to face movement direction
     const targetRotation = Rotation.y[eid]
-    // Simple lerp for rotation
     const currentRot = groupRef.current.rotation.y
     const diff = targetRotation - currentRot
-    // Normalize angle difference to avoid spinning the long way around
     const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff))
     groupRef.current.rotation.y += normalizedDiff * 10 * delta
-    
+
     const charPos = groupRef.current.position
     state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, charPos.x + 20, 0.1)
     state.camera.position.y = 20
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, charPos.z + 20, 0.1)
     state.camera.lookAt(charPos.x, 0, charPos.z)
-    
-    // Hotbar Skills Check
-    const tSkill = useStore.getState().triggeredSkill
-    if (tSkill) {
-      if (tSkill === 'dash') PlayerAttack.action[eid] = 3
-      if (tSkill === 'cleave') PlayerAttack.action[eid] = 4
-      if (tSkill === 'shield') PlayerAttack.action[eid] = 5
-      useStore.getState().clearTriggeredSkill()
-    }
-    
-    // Gate Teleportation Check
-    // Gate is at [15, 0, 15]
+
+    // Gate Teleportation Check (gate is at [15, 0, 15])
     if (Math.abs(charPos.x - 15) < 3 && Math.abs(charPos.z - 15) < 3) {
       if (currentArea === 'cyber_forest') {
-        useStore.getState().setCurrentArea('ruined_spire')
-        // Bounce player back slightly so they don't instantly teleport back
+        store.setCurrentArea('ruined_spire')
         Position.x[eid] = 0
         Position.z[eid] = 0
       } else if (currentArea === 'ruined_spire') {
-        useStore.getState().setCurrentArea('cyber_forest')
+        store.setCurrentArea('cyber_forest')
         Position.x[eid] = 0
         Position.z[eid] = 0
       }
     }
 
-    // Weapon Animation Loop
-    if (modelRef.current && modelRef.current.weapon) {
-      if (PlayerAttack.cooldown[eid] > 0) {
-        const attackPhase = (state.clock.elapsedTime * 20) % (Math.PI * 2)
-        modelRef.current.weapon.rotation.x = -Math.PI / 2 + Math.sin(attackPhase) * 2 // Slash!
-        modelRef.current.weapon.position.z = 1 + Math.sin(attackPhase) * 0.5 // Thrust
-        modelRef.current.weapon.scale.setScalar(1 + Math.sin(attackPhase) * 0.3) // Pulse
-      } else {
-        modelRef.current.weapon.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 4) * 0.1
-        modelRef.current.weapon.position.z = 0.5
-        modelRef.current.weapon.rotation.x = 0
-        modelRef.current.weapon.scale.setScalar(1)
-      }
+    // ── Animation state machine ──
+    const moving = Math.abs(Velocity.x[eid]) > 0.5 || Math.abs(Velocity.z[eid]) > 0.5
+    let nextAnim = 'idle'
+    if (runtime.isDead) nextAnim = 'death'
+    else if (animRef.current.abilityUntil > Date.now()) nextAnim = animRef.current.abilityAnim
+    else if (PlayerAttack.cooldown[eid] > 0.25) nextAnim = 'attack'
+    else if (moving) nextAnim = 'run'
+    if (nextAnim !== animRef.current.value) {
+      animRef.current.value = nextAnim
+      setAnim(nextAnim)
     }
 
     // Multiplayer Sync (20 ticks per second)
     if (window.frameCount === undefined) window.frameCount = 0
     window.frameCount++
     if (window.frameCount % 3 === 0 && socket.connected) {
+      const w = store.equipped.weapon
       socket.emit('player_move', {
         position: [charPos.x, charPos.y, charPos.z],
         rotation: targetRotation,
-        isAttacking: PlayerAttack.cooldown[eid] > 0
+        isAttacking: PlayerAttack.cooldown[eid] > 0.25,
+        isMoving: moving,
+        level: store.level,
+        equippedWeapon: w ? { model: w.model, rarity: w.rarity, color: w.color } : null
       })
     }
   })
 
   if (!config || eid === null) return null
 
-  const isMage = config.class === 'mage'
-  const isWarrior = config.class === 'warrior'
-  const isRogue = config.class === 'rogue'
-  const energyColor = isMage ? '#06b6d4' : isWarrior ? '#ef4444' : '#a855f7'
+  const energyColor = CLASS_STATS[config.class]?.color || '#60a5fa'
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
-      
-      {/* --- Advanced Procedural 3D Model --- */}
-      <CharacterModel 
-        ref={modelRef}
-        charClass={config.class} 
-        energyColor={energyColor} 
-      />
+      {/* Rigged, animated class model with equipped weapon */}
+      <EquippedModel charClass={config.class} anim={anim} energyColor={energyColor} />
 
       {/* Target/Selection Ring */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
         <ringGeometry args={[1.2, 1.4, 32]} />
         <meshBasicMaterial color={energyColor} transparent opacity={0.8} />
       </mesh>
-      
+
       {/* Subtle glowing ground shadow */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[1.2, 32]} />
@@ -181,4 +212,10 @@ export default function Character() {
       </mesh>
     </group>
   )
+}
+
+// Isolated so weapon swaps re-render only the model, not the whole Character.
+function EquippedModel({ charClass, anim, energyColor }) {
+  const weapon = useStore(state => state.equipped.weapon)
+  return <ClassModel charClass={charClass} anim={anim} weaponItem={weapon} energyColor={energyColor} />
 }

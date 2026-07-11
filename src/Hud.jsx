@@ -1,165 +1,321 @@
-import { useStore } from './store'
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, memo } from 'react'
+import { query } from 'bitecs'
+import { useStore, runtime } from './store'
+import { world, Position, Enemy, Health } from './ecs/world'
+import { ENEMY_TYPES } from './data/items'
+import { xpForLevel, CLASS_STATS } from './data/progression'
+import { ABILITIES } from './data/skills'
 
-export default function Hud() {
-  const config = useStore(state => state.characterConfig)
-  const health = useStore(state => state.health)
-  const maxHealth = useStore(state => state.maxHealth)
-  const resource = useStore(state => state.resource)
-  const maxResource = useStore(state => state.maxResource)
-  const level = useStore(state => state.level)
-  const xp = useStore(state => state.xp)
-  const currency = useStore(state => state.currency)
-  const toggleMap = useStore(state => state.toggleMap)
-  const toggleInventory = useStore(state => state.toggleInventory)
-  
-  const [activeKeys, setActiveKeys] = useState({})
-  
+/*
+ * Hyper-modern sci-fi HUD.
+ * Every element is its own memoized component with a razor-thin zustand
+ * selector, so combat-frequency updates (health/resource ticks) only
+ * re-render the orb that changed — never the whole overlay.
+ */
+
+// ── Health / Resource orbs ───────────────────────────────────────────────
+function Orb({ value, max, color, label, align }) {
+  const pct = Math.max(0, Math.min(1, max > 0 ? value / max : 0))
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+      <div style={{
+        width: '110px', height: '110px', borderRadius: '50%', position: 'relative', overflow: 'hidden',
+        border: `2px solid ${color}88`, background: 'rgba(2,6,23,0.85)',
+        boxShadow: `0 0 25px ${color}44, inset 0 0 20px rgba(0,0,0,0.8)`
+      }}>
+        {/* liquid fill */}
+        <div style={{
+          position: 'absolute', left: 0, bottom: 0, width: '100%', height: `${pct * 100}%`,
+          background: `linear-gradient(180deg, ${color}, ${color}88)`,
+          boxShadow: `0 0 30px ${color}`, transition: 'height 0.25s ease-out'
+        }} />
+        {/* liquid surface shimmer */}
+        <div style={{
+          position: 'absolute', left: 0, bottom: `${pct * 100}%`, width: '100%', height: '4px',
+          background: 'rgba(255,255,255,0.5)', filter: 'blur(1px)', transition: 'bottom 0.25s ease-out'
+        }} />
+        {/* glass highlight */}
+        <div style={{
+          position: 'absolute', top: '8%', left: '18%', width: '30%', height: '18%',
+          borderRadius: '50%', background: 'rgba(255,255,255,0.25)', filter: 'blur(3px)'
+        }} />
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'Orbitron', fontWeight: 900, fontSize: '1rem', color: 'white', textShadow: '0 0 6px black'
+        }}>
+          {Math.floor(value)}
+        </div>
+      </div>
+      <div style={{ fontFamily: 'Orbitron', fontSize: '0.6rem', letterSpacing: '0.25em', color, textShadow: `0 0 8px ${color}` }}>{label}</div>
+    </div>
+  )
+}
+
+const HealthOrb = memo(function HealthOrb() {
+  const health = useStore(s => Math.floor(s.health))
+  const maxHealth = useStore(s => s.maxHealth)
+  return <Orb value={health} max={maxHealth} color="#ef4444" label="VITALS" />
+})
+
+const ResourceOrb = memo(function ResourceOrb() {
+  const resource = useStore(s => Math.floor(s.resource))
+  const maxResource = useStore(s => s.maxResource)
+  const charClass = useStore(s => s.characterConfig?.class)
+  const c = CLASS_STATS[charClass] || CLASS_STATS.warrior
+  return <Orb value={resource} max={maxResource} color={c.color === '#ef4444' ? '#f97316' : c.color} label={c.resourceName.toUpperCase()} />
+})
+
+// ── XP bar ───────────────────────────────────────────────────────────────
+const XpBar = memo(function XpBar() {
+  const xp = useStore(s => s.xp)
+  const level = useStore(s => s.level)
+  const needed = xpForLevel(level)
+  const pct = Math.min(100, (xp / needed) * 100)
+  return (
+    <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <span style={{ fontFamily: 'Orbitron', fontSize: '0.6rem', color: '#facc15', whiteSpace: 'nowrap' }}>LV {level}</span>
+      <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden', border: '1px solid rgba(250,204,21,0.25)' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, #ca8a04, #facc15)', boxShadow: '0 0 8px #facc15', transition: 'width 0.3s' }} />
+      </div>
+      <span style={{ fontFamily: 'Orbitron', fontSize: '0.55rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>{xp}/{needed}</span>
+    </div>
+  )
+})
+
+// ── Action bar (keys 1-5) with live cooldown sweeps ─────────────────────
+const ActionBar = memo(function ActionBar() {
+  const hotbar = useStore(s => s.hotbar)
+  const updateHotbar = useStore(s => s.updateHotbar)
+  const triggerSkill = useStore(s => s.triggerSkill)
+  const overlayRefs = useRef([])
+
   useEffect(() => {
-    const handleKeyDown = (e) => setActiveKeys(prev => ({ ...prev, [e.code]: true }))
-    const handleKeyUp = (e) => setActiveKeys(prev => ({ ...prev, [e.code]: false }))
-    
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
+    const handleKeyDown = (e) => {
+      if (['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].includes(e.code)) {
+        const skill = useStore.getState().hotbar[parseInt(e.code.slice(-1)) - 1]
+        if (skill) triggerSkill(skill)
+      }
     }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [triggerSkill])
+
+  // Cooldown sweep painted straight onto the DOM — zero React re-renders.
+  useEffect(() => {
+    let raf
+    const tick = () => {
+      const hb = useStore.getState().hotbar
+      hb.forEach((skillId, i) => {
+        const el = overlayRefs.current[i]
+        if (!el) return
+        const cd = skillId ? runtime.cooldowns[skillId] : null
+        if (cd && cd.readyAt > Date.now()) {
+          const remaining = (cd.readyAt - Date.now()) / 1000
+          const frac = Math.min(1, remaining / cd.duration)
+          el.style.opacity = '1'
+          el.style.background = `conic-gradient(rgba(2,6,23,0.85) ${frac * 360}deg, transparent 0deg)`
+          el.textContent = remaining > 1 ? Math.ceil(remaining) : remaining.toFixed(1)
+        } else {
+          el.style.opacity = '0'
+          el.textContent = ''
+        }
+      })
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
   }, [])
-  
-  if (!config) return null
-  
-  const healthPercent = (health / maxHealth) * 100
-  const resourcePercent = (resource / maxResource) * 100
-  
-  let resourceColor = '#3b82f6'
-  let resourceName = 'Energy'
-  
-  if (config.class === 'warrior') { 
-    resourceColor = '#ef4444' 
-    resourceName = 'Heat' 
-  } else if (config.class === 'mage') { 
-    resourceColor = '#06b6d4' 
-    resourceName = 'Aether' 
-  } else if (config.class === 'rogue') { 
-    resourceColor = '#a855f7' 
-    resourceName = 'Overclock' 
+
+  const handleDrop = (e, index) => {
+    e.preventDefault()
+    const skillId = e.dataTransfer.getData('skillId')
+    if (skillId) updateHotbar(index, skillId)
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: '0.5rem' }}>
+      {hotbar.map((skillId, index) => {
+        const ability = skillId ? ABILITIES[skillId] : null
+        return (
+          <div
+            key={index}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, index)}
+            title={ability ? `${ability.name} — ${ability.cost} energy` : 'Drag a skill here from the Skill Matrix [K]'}
+            style={{
+              width: '58px', height: '58px', position: 'relative',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.7rem', borderRadius: '0.5rem',
+              background: 'rgba(2,6,23,0.75)', backdropFilter: 'blur(8px)',
+              border: skillId ? '1px solid rgba(96,165,250,0.7)' : '1px solid rgba(255,255,255,0.12)',
+              boxShadow: skillId ? '0 0 15px rgba(96,165,250,0.35)' : 'none',
+              clipPath: 'polygon(12% 0, 100% 0, 88% 100%, 0 100%)'
+            }}
+          >
+            <span>{ability?.icon || ''}</span>
+            {/* cooldown sweep overlay */}
+            <div
+              ref={el => (overlayRefs.current[index] = el)}
+              style={{
+                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'Orbitron', fontWeight: 900, fontSize: '0.9rem', color: '#facc15',
+                pointerEvents: 'none', opacity: 0
+              }}
+            />
+            <div style={{
+              position: 'absolute', top: '2px', right: '8px',
+              fontFamily: 'Orbitron', fontSize: '0.55rem', fontWeight: 900, color: '#60a5fa'
+            }}>{index + 1}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+})
+
+// ── Minimap radar: canvas driven by rAF, reads ECS directly ─────────────
+const Minimap = memo(function Minimap() {
+  const canvasRef = useRef()
+
+  useEffect(() => {
+    let raf
+    const SIZE = 160
+    const RANGE = 45 // world units shown
+    const draw = () => {
+      const canvas = canvasRef.current
+      if (!canvas) { raf = requestAnimationFrame(draw); return }
+      const ctx = canvas.getContext('2d')
+      const half = SIZE / 2
+      const scale = half / RANGE
+
+      ctx.clearRect(0, 0, SIZE, SIZE)
+      // circular clip
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(half, half, half - 1, 0, Math.PI * 2)
+      ctx.clip()
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.78)'
+      ctx.fillRect(0, 0, SIZE, SIZE)
+      // grid rings
+      ctx.strokeStyle = 'rgba(96,165,250,0.18)'
+      for (let r = 1; r <= 3; r++) {
+        ctx.beginPath()
+        ctx.arc(half, half, (half / 3) * r, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+      ctx.beginPath(); ctx.moveTo(half, 0); ctx.lineTo(half, SIZE); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(0, half); ctx.lineTo(SIZE, half); ctx.stroke()
+
+      const px = runtime.playerPos.x
+      const pz = runtime.playerPos.z
+
+      // enemies
+      for (const eid of query(world, [Enemy, Position, Health])) {
+        if (Health.current[eid] <= 0) continue
+        const dx = (Position.x[eid] - px) * scale
+        const dz = (Position.z[eid] - pz) * scale
+        if (dx * dx + dz * dz > half * half) continue
+        const type = ENEMY_TYPES[Enemy.type[eid]] || ENEMY_TYPES[0]
+        ctx.fillStyle = type.color
+        ctx.beginPath()
+        ctx.arc(half + dx, half + dz, type.behavior === 'boss' ? 4 : 2.5, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // player blip
+      ctx.fillStyle = '#ffffff'
+      ctx.shadowColor = '#60a5fa'
+      ctx.shadowBlur = 8
+      ctx.beginPath()
+      ctx.arc(half, half, 4, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowBlur = 0
+      ctx.restore()
+
+      // bezel
+      ctx.strokeStyle = 'rgba(96,165,250,0.6)'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(half, half, half - 1, 0, Math.PI * 2)
+      ctx.stroke()
+
+      raf = requestAnimationFrame(draw)
+    }
+    raf = requestAnimationFrame(draw)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  return <canvas ref={canvasRef} width={160} height={160} style={{ display: 'block' }} />
+})
+
+// ── Top bar: identity, credits, save status, buttons ────────────────────
+const TopBar = memo(function TopBar() {
+  const name = useStore(s => s.characterConfig?.name)
+  const level = useStore(s => s.level)
+  const currency = useStore(s => s.currency)
+  const skillPoints = useStore(s => s.skillPoints)
+  const area = useStore(s => s.currentArea)
+  const saveState = useStore(s => s.saveState)
+  const toggleMap = useStore(s => s.toggleMap)
+  const toggleInventory = useStore(s => s.toggleInventory)
+  const toggleSkillTree = useStore(s => s.toggleSkillTree)
+  const exitToCharacterSelect = useStore(s => s.exitToCharacterSelect)
+
+  const areaNames = { hub: 'NEXUS HUB', cyber_forest: 'CYBER FOREST', ruined_spire: 'RUINED SPIRE' }
+  const chip = {
+    fontFamily: 'Orbitron', fontSize: '0.7rem', fontWeight: 700, color: 'white',
+    background: 'rgba(2,6,23,0.7)', backdropFilter: 'blur(8px)', padding: '0.45rem 0.8rem',
+    border: '1px solid rgba(255,255,255,0.12)', borderRadius: '0.4rem'
   }
 
   return (
     <>
-      {/* Top Left Stats */}
-      <div className="top-left-hud">
-        <div className="stat-box">LEVEL {level}</div>
-        <div className="stat-box">XP: {xp} / {level * 100}</div>
-        <div className="stat-box currency">CREDITS: {currency}</div>
+      <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', pointerEvents: 'auto' }}>
+        <div style={{ ...chip, color: '#60a5fa' }}>{name} · LV {level}</div>
+        <div style={{ ...chip, color: '#34d399' }}>⬡ {currency}</div>
+        {skillPoints > 0 && <div style={{ ...chip, color: '#facc15', border: '1px solid #facc15', cursor: 'pointer' }} onClick={toggleSkillTree}>★ {skillPoints} SKILL PTS</div>}
+        <div style={{
+          ...chip,
+          color: saveState === 'error' ? '#f87171' : saveState === 'saving' ? '#facc15' : '#475569',
+          fontSize: '0.6rem'
+        }}>
+          {saveState === 'saving' ? '⟳ SAVING…' : saveState === 'error' ? '⚠ SAVE FAILED' : '✓ AUTO-SAVE'}
+        </div>
       </div>
 
-      {/* Top Right Mini-Map / Buttons */}
-      <div className="top-right-hud" style={{ display: 'flex', gap: '0.5rem' }}>
-        <button className="map-btn" onClick={toggleInventory}>🎒 INVENTORY (I)</button>
-        <button className="map-btn" onClick={toggleMap}>🌍 WORLD MAP (M)</button>
+      <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', pointerEvents: 'auto' }}>
+        <Minimap />
+        <div style={{ ...chip, fontSize: '0.6rem', color: '#94a3b8', letterSpacing: '0.2em' }}>{areaNames[area] || area?.toUpperCase()}</div>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <button style={{ ...chip, cursor: 'pointer' }} onClick={toggleInventory}>🎒 I</button>
+          <button style={{ ...chip, cursor: 'pointer' }} onClick={toggleSkillTree}>🧠 K</button>
+          <button style={{ ...chip, cursor: 'pointer' }} onClick={toggleMap}>🌍 M</button>
+          <button style={{ ...chip, cursor: 'pointer', color: '#f87171' }} onClick={exitToCharacterSelect} title="Save & switch character">⏏</button>
+        </div>
       </div>
+    </>
+  )
+})
 
-      <div className="hud-container" style={{ gap: '4rem', paddingBottom: '1rem' }}>
-        {/* Futuristic Health Bar (Left) */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem', width: '300px' }}>
-          <div className="orb-label" style={{ color: '#fca5a5', paddingLeft: '1rem' }}>HEALTH</div>
-          <div className="glass-panel" style={{
-            width: '100%',
-            height: '32px',
-            position: 'relative',
-            clipPath: 'polygon(0 0, 100% 0, 95% 100%, 5% 100%)',
-            border: '1px solid rgba(220, 38, 38, 0.4)',
-            boxShadow: '0 0 20px rgba(220, 38, 38, 0.2)'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: 0, left: 0,
-              width: `${healthPercent}%`,
-              height: '100%',
-              background: 'linear-gradient(90deg, #b91c1c, #ef4444)',
-              transition: 'width 0.3s ease-out',
-              boxShadow: '0 0 20px rgba(239, 68, 68, 0.8)'
-            }} />
-            <div style={{
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
-              opacity: 0.5
-            }} />
-            <span style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              fontFamily: 'Orbitron',
-              fontWeight: 900,
-              color: 'white',
-              textShadow: '0 0 5px rgba(0,0,0,1)'
-            }}>{Math.floor(health)} / {maxHealth}</span>
+export default function Hud() {
+  return (
+    <>
+      <TopBar />
+
+      {/* Bottom combat cluster: orb — action bar + xp — orb */}
+      <div style={{
+        position: 'absolute', bottom: '1.2rem', left: '50%', transform: 'translateX(-50%)',
+        display: 'flex', alignItems: 'flex-end', gap: '1.5rem', pointerEvents: 'auto'
+      }}>
+        <HealthOrb />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', paddingBottom: '1.1rem' }}>
+          <XpBar />
+          <ActionBar />
+          <div style={{ fontFamily: 'Orbitron', fontSize: '0.55rem', color: '#475569', letterSpacing: '0.15em' }}>
+            [WASD] MOVE · [J / SPACE] ATTACK · [1-5] SKILLS
           </div>
         </div>
-
-        {/* Action Bar Placeholder (Center) */}
-        <div className="action-bar-placeholder">
-          <div className={`action-slot ${activeKeys['KeyJ'] ? 'active' : ''}`}>J</div>
-        </div>
-
-        {/* Futuristic Resource Bar (Right) */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', width: '300px' }}>
-          <div className="orb-label" style={{ color: resourceColor, paddingRight: '1rem' }}>{resourceName}</div>
-          <div className="glass-panel" style={{
-            width: '100%',
-            height: '32px',
-            position: 'relative',
-            clipPath: 'polygon(5% 0, 95% 0, 100% 100%, 0 100%)',
-            border: `1px solid ${resourceColor}`,
-            boxShadow: `0 0 20px ${resourceColor}40`
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: 0, right: 0,
-              width: `${resourcePercent}%`,
-              height: '100%',
-              background: `linear-gradient(270deg, ${resourceColor}, ${resourceColor}88)`,
-              transition: 'width 0.3s ease-out',
-              boxShadow: `0 0 20px ${resourceColor}`
-            }} />
-            <div style={{
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
-              opacity: 0.5
-            }} />
-            <span style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              fontFamily: 'Orbitron',
-              fontWeight: 900,
-              color: 'white',
-              textShadow: '0 0 5px rgba(0,0,0,1)'
-            }}>{Math.floor(resource)} / {maxResource}</span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Bottom left hints */}
-      <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', display: 'flex', gap: '1rem' }}>
-        <div className="glass-panel" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', fontFamily: 'Orbitron', fontWeight: 600 }}>
-          [I] INVENTORY
-        </div>
-        <div className="glass-panel" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', fontFamily: 'Orbitron', fontWeight: 600 }}>
-          [M] MAP
-        </div>
-        <div className="glass-panel" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', fontFamily: 'Orbitron', fontWeight: 600 }}>
-          [K] SKILLS
-        </div>
+        <ResourceOrb />
       </div>
     </>
   )

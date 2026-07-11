@@ -1,6 +1,8 @@
 import { query } from 'bitecs'
 import { Position, Velocity, Rotation, PlayerControls, PlayerAttack, Enemy, Health } from './world'
-import { useStore } from '../store'
+import { useStore, runtime, getBuffValue } from '../store'
+import { ABILITIES } from '../data/skills'
+import { ENEMY_TYPES, scaleEnemy, rollLoot } from '../data/items'
 
 // Helper for 2D distance
 function getDistance(x1, z1, x2, z2) {
@@ -11,39 +13,46 @@ function getDistance(x1, z1, x2, z2) {
 
 export function playerInputSystem(world) {
   for (const eid of query(world, [Position, Velocity, Rotation, PlayerControls])) {
+    if (runtime.isDead) {
+      Velocity.x[eid] = 0
+      Velocity.z[eid] = 0
+      continue
+    }
     const forward = PlayerControls.forward[eid]
     const backward = PlayerControls.backward[eid]
     const left = PlayerControls.left[eid]
     const right = PlayerControls.right[eid]
-    
+
     let vx = 0
     let vz = 0
-    
+
     // Isometric Camera Mapping
     if (forward) { vx -= 1; vz -= 1; }
     if (backward) { vx += 1; vz += 1; }
     if (left) { vx -= 1; vz += 1; }
     if (right) { vx += 1; vz -= 1; }
-    
-    const speed = 15 // Increased player speed for better ARPG feel
+
+    // Speed scales with level + gear + passives + temporary buffs
+    const speed = useStore.getState().stats.moveSpeed * (1 + getBuffValue('moveSpeedPct'))
     const length = Math.sqrt(vx * vx + vz * vz)
     if (length > 0) {
       vx = (vx / length) * speed
       vz = (vz / length) * speed
       Rotation.y[eid] = Math.atan2(vx, vz)
     }
-    
+
     Velocity.x[eid] = vx
     Velocity.z[eid] = vz
   }
 }
 
-export function enemyAISystem(world, playerEid) {
+export function enemyAISystem(world, playerEid, delta) {
   if (playerEid === null) return
-  
+
   const px = Position.x[playerEid]
   const pz = Position.z[playerEid]
-  
+  const cloaked = runtime.cloakedUntil > Date.now() || runtime.isDead
+
   for (const eid of query(world, [Enemy, Position, Velocity, Rotation, Health])) {
     if (Health.current[eid] <= 0) {
       Velocity.x[eid] = 0
@@ -51,30 +60,161 @@ export function enemyAISystem(world, playerEid) {
       continue
     }
 
+    const type = ENEMY_TYPES[Enemy.type[eid]] || ENEMY_TYPES[0]
     const ex = Position.x[eid]
     const ez = Position.z[eid]
     const dist = getDistance(px, pz, ex, ez)
-    
-    // Aggro radius 25, attack radius 1.5
-    if (dist < 25 && dist > 1.5) {
-      // Move toward player
+    const aggroRange = type.behavior === 'boss' ? 40 : 25
+    const attackRange = type.size + 0.8
+
+    if (Enemy.attackTimer[eid] > 0) Enemy.attackTimer[eid] -= delta
+
+    if (!cloaked && dist < aggroRange && dist > attackRange) {
       const dx = px - ex
       const dz = pz - ez
       const length = Math.sqrt(dx * dx + dz * dz)
-      const speed = 6
-      Velocity.x[eid] = (dx / length) * speed
-      Velocity.z[eid] = (dz / length) * speed
+      let vx = (dx / length) * type.speed
+      let vz = (dz / length) * type.speed
+
+      // Flankers weave sideways while closing in
+      if (type.behavior === 'flank' && dist > 4) {
+        if (Enemy.strafeDir[eid] === 0) Enemy.strafeDir[eid] = Math.random() > 0.5 ? 1 : -1
+        const perpX = -dz / length, perpZ = dx / length
+        vx += perpX * type.speed * 0.6 * Enemy.strafeDir[eid]
+        vz += perpZ * type.speed * 0.6 * Enemy.strafeDir[eid]
+        if (Math.random() < 0.005) Enemy.strafeDir[eid] *= -1
+      }
+
+      Velocity.x[eid] = vx
+      Velocity.z[eid] = vz
       Rotation.y[eid] = Math.atan2(dx, dz)
-    } else if (dist <= 1.5) {
-      // Attack range (Stop moving)
+    } else if (!cloaked && dist <= attackRange) {
       Velocity.x[eid] = 0
       Velocity.z[eid] = 0
-      // Much slower health drain so the player doesn't die in 3 seconds!
-      Health.current[playerEid] -= 0.02
+      // Discrete, level-scaled attacks on a cooldown instead of constant drain
+      if (Enemy.attackTimer[eid] <= 0) {
+        const scaled = scaleEnemy(Enemy.type[eid], Enemy.level[eid] || 1)
+        Health.current[playerEid] -= scaled.dmg
+        Enemy.attackTimer[eid] = type.behavior === 'brute' ? 2.0 : type.behavior === 'boss' ? 1.6 : 1.2
+        useStore.getState().addFloatingText(`-${scaled.dmg}`, [px, 2.2, pz], '#f87171')
+      }
     } else {
-      // Idle
       Velocity.x[eid] = 0
       Velocity.z[eid] = 0
+    }
+  }
+}
+
+// ── Shared damage application with crits, kill rewards & loot drops ─────
+function damageEnemy(eid, amount, opts = {}) {
+  const store = useStore.getState()
+  const { critChance } = store.stats
+  const isCrit = Math.random() < critChance
+  const final = Math.floor(amount * (isCrit ? 2 : 1))
+
+  if (Health.current[eid] <= 0) return
+  Health.current[eid] -= final
+
+  const ex = Position.x[eid]
+  const ez = Position.z[eid]
+  store.addFloatingText(isCrit ? `${final} CRIT!` : `${final}`, [ex, 2, ez], isCrit ? '#f59e0b' : '#f8fafc')
+
+  if (opts.knockback) {
+    const dx = ex - opts.fromX
+    const dz = ez - opts.fromZ
+    const d = Math.max(0.1, Math.sqrt(dx * dx + dz * dz))
+    Velocity.x[eid] += (dx / d) * opts.knockback
+    Velocity.z[eid] += (dz / d) * opts.knockback
+  }
+
+  if (Health.current[eid] <= 0) {
+    const typeIdx = Enemy.type[eid]
+    const level = Enemy.level[eid] || 1
+    const scaled = scaleEnemy(typeIdx, level)
+
+    store.addLoot(scaled.xp, scaled.credits)
+    store.addFloatingText(`+${scaled.xp} XP`, [ex, 2.6, ez], '#fef08a')
+    store.addFloatingText(`+${scaled.credits} Credits`, [ex, 3.2, ez], '#34d399')
+
+    const item = rollLoot(typeIdx, level)
+    if (item) {
+      store.addInventoryItem(item)
+      store.addFloatingText(`${item.name} [${item.rarity}]`, [ex, 3.9, ez], item.color)
+    }
+  }
+}
+
+function playerDamage() {
+  const store = useStore.getState()
+  return store.stats.damage * (1 + getBuffValue('damagePct'))
+}
+
+// Execute an active ability from the hotbar.
+function executeAbility(abilityId, playerEid, enemies) {
+  const ability = ABILITIES[abilityId]
+  if (!ability) return
+  const store = useStore.getState()
+  const px = Position.x[playerEid]
+  const pz = Position.z[playerEid]
+  const pRot = Rotation.y[playerEid]
+  const dmg = playerDamage()
+
+  switch (ability.kind) {
+    case 'dash': {
+      Position.x[playerEid] += Math.sin(pRot) * ability.distance
+      Position.z[playerEid] += Math.cos(pRot) * ability.distance
+      store.addFloatingText('PHASE DASH', [px, 2, pz], '#a855f7')
+      break
+    }
+    case 'cloak': {
+      runtime.cloakedUntil = Date.now() + ability.duration * 1000
+      store.addFloatingText('CLOAKED', [px, 2, pz], '#94a3b8')
+      break
+    }
+    case 'heal': {
+      const heal = Math.floor(store.maxHealth * ability.healPct)
+      Health.current[playerEid] = Math.min(store.maxHealth, Health.current[playerEid] + heal)
+      store.addFloatingText(`+${heal} HP`, [px, 2, pz], '#22c55e')
+      break
+    }
+    case 'buff': {
+      for (const [k, v] of Object.entries(ability.buff)) {
+        runtime.buffs[k] = { value: v, until: Date.now() + ability.duration * 1000 }
+      }
+      store.addFloatingText(ability.name.toUpperCase() + '!', [px, 2, pz], '#fbbf24')
+      break
+    }
+    case 'aoe': {
+      for (const eid of enemies) {
+        if (Health.current[eid] <= 0) continue
+        const d = getDistance(px, pz, Position.x[eid], Position.z[eid])
+        if (d < ability.radius) {
+          damageEnemy(eid, dmg * ability.dmgMult, { knockback: ability.knockback || 0, fromX: px, fromZ: pz })
+        }
+      }
+      break
+    }
+    case 'cone': {
+      for (const eid of enemies) {
+        if (Health.current[eid] <= 0) continue
+        const ex = Position.x[eid]
+        const ez = Position.z[eid]
+        const d = getDistance(px, pz, ex, ez)
+        if (d < ability.range) {
+          const angleToEnemy = Math.atan2(ex - px, ez - pz)
+          let diff = angleToEnemy - pRot
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff))
+          if (Math.abs(diff) < Math.PI / 2) {
+            // Execute-style abilities only work below a health threshold
+            if (ability.executeThreshold && Health.current[eid] / Health.max[eid] > ability.executeThreshold) {
+              damageEnemy(eid, dmg) // reduced hit on healthy targets
+            } else {
+              damageEnemy(eid, dmg * ability.dmgMult)
+            }
+          }
+        }
+      }
+      break
     }
   }
 }
@@ -82,115 +222,49 @@ export function enemyAISystem(world, playerEid) {
 export function combatSystem(world, delta, playerEid) {
   if (playerEid === null) return
 
-  const px = Position.x[playerEid]
-  const pz = Position.z[playerEid]
-  const pRot = Rotation.y[playerEid]
-  const ents = query(world, [Enemy, Position, Health])
+  const store = useStore.getState()
+  const enemies = query(world, [Enemy, Position, Health])
 
-  if (PlayerAttack.action[playerEid] === 3 && PlayerAttack.cooldown[playerEid] <= 0) {
-    // Phase Dash: Teleport forward
-    Position.x[playerEid] += Math.sin(pRot) * 10
-    Position.z[playerEid] += Math.cos(pRot) * 10
-    PlayerAttack.cooldown[playerEid] = 1.0
-    PlayerAttack.action[playerEid] = 0
-    useStore.getState().addFloatingText("PHASE DASH", [px, 2, pz], "#a855f7")
-  }
-  
-  if (PlayerAttack.action[playerEid] === 4 && PlayerAttack.cooldown[playerEid] <= 0) {
-    // Energy Cleave: Massive AoE damage
-    for (let i = 0; i < ents.length; i++) {
-      const eid = ents[i]
-      const dx = Position.x[eid] - px
-      const dz = Position.z[eid] - pz
-      const dist = Math.sqrt(dx*dx + dz*dz)
-      if (dist < 8) {
-        Health.current[eid] -= 100
-        Velocity.x[eid] += dx * 5
-        Velocity.z[eid] += dz * 5
-        useStore.getState().addFloatingText("100 CRIT", [Position.x[eid], 2, Position.z[eid]], "#ef4444")
-      }
-    }
-    PlayerAttack.cooldown[playerEid] = 2.0
-    PlayerAttack.action[playerEid] = 0
-  }
-  
-  if (PlayerAttack.action[playerEid] === 5 && PlayerAttack.cooldown[playerEid] <= 0) {
-    // Aether Shield: Heal self
-    Health.current[playerEid] = Math.min(100, Health.current[playerEid] + 50)
-    PlayerAttack.cooldown[playerEid] = 3.0
-    PlayerAttack.action[playerEid] = 0
-    useStore.getState().addFloatingText("+50 HP", [px, 2, pz], "#22c55e")
+  // Hotbar ability triggered from the store?
+  const tSkill = store.triggeredSkill
+  if (tSkill) {
+    executeAbility(tSkill, playerEid, enemies)
+    store.clearTriggeredSkill()
   }
 
-
-
-  // Cooldown reduction
+  // Cooldown reduction for the basic attack
   if (PlayerAttack.cooldown[playerEid] > 0) {
     PlayerAttack.cooldown[playerEid] -= delta
   }
 
-  // Attack Triggered
-  if (PlayerAttack.action[playerEid] > 0 && PlayerAttack.cooldown[playerEid] <= 0) {
-    const actionType = PlayerAttack.action[playerEid]
-    PlayerAttack.action[playerEid] = 0 // consume action
-    PlayerAttack.cooldown[playerEid] = 0.5 // global cooldown 0.5s
+  // Basic attack (J key)
+  if (PlayerAttack.action[playerEid] === 1 && PlayerAttack.cooldown[playerEid] <= 0 && !runtime.isDead) {
+    PlayerAttack.action[playerEid] = 0
+    PlayerAttack.cooldown[playerEid] = 0.5
 
     const px = Position.x[playerEid]
     const pz = Position.z[playerEid]
     const pRot = Rotation.y[playerEid]
-    const attackRange = actionType === 1 ? 8 : 15 // Increased ranges: J=Melee(8), K=Ranged(15)
+    const isRanged = store.characterConfig?.class === 'mage'
+    const attackRange = isRanged ? 15 : 8
+    const dmg = playerDamage()
 
-    // Soft-Lock Cone Targeting against all enemies
-    for (const eid of query(world, [Enemy, Position, Health])) {
+    for (const eid of enemies) {
       if (Health.current[eid] <= 0) continue
-
       const ex = Position.x[eid]
       const ez = Position.z[eid]
       const dist = getDistance(px, pz, ex, ez)
-      
       if (dist < attackRange) {
-        // Calculate angle to enemy
         const angleToEnemy = Math.atan2(ex - px, ez - pz)
-        // Normalize angle diff
         let diff = angleToEnemy - pRot
-        while (diff < -Math.PI) diff += Math.PI * 2
-        while (diff > Math.PI) diff -= Math.PI * 2
-        
-        // Widen cone to 180 degrees (PI/2 rads on either side) to make hitting much easier!
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff))
         if (Math.abs(diff) < Math.PI / 2) {
-          const wpnPower = useStore.getState().equipped.weapon?.power || 0
-          Health.current[eid] -= (35 + wpnPower)
-          
-          if (Health.current[eid] <= 0) {
-            // Enemy Died!
-            const xpGained = 25 + Math.floor(Math.random() * 10)
-            const currencyGained = 5 + Math.floor(Math.random() * 5)
-            
-            useStore.getState().addLoot(xpGained, currencyGained)
-            useStore.getState().addFloatingText(`+${xpGained} XP`, [ex, 2, ez], '#fef08a')
-            useStore.getState().addFloatingText(`+${currencyGained} Credits`, [ex, 2.5, ez], '#34d399')
-            
-            // Item Drop Logic
-            if (Math.random() > 0.8) {
-              const types = ['weapon', 'armor']
-              const rarities = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']
-              const rarityColors = ['#94a3b8', '#4ade80', '#3b82f6', '#a855f7', '#f59e0b']
-              const rIdx = Math.random() > 0.9 ? 4 : Math.random() > 0.7 ? 3 : Math.random() > 0.4 ? 2 : Math.random() > 0.1 ? 1 : 0
-              
-              const item = {
-                id: `item_${Math.random()}`,
-                name: `${rarities[rIdx]} ${types[Math.floor(Math.random() * types.length)]}`,
-                rarity: rarities[rIdx],
-                color: rarityColors[rIdx],
-                power: (rIdx + 1) * 10
-              }
-              useStore.getState().addInventoryItem(item)
-              useStore.getState().addFloatingText(`Found: ${item.name}`, [ex, 3, ez + 1], item.color)
-            }
-          }
+          damageEnemy(eid, dmg)
         }
       }
     }
+  } else if (PlayerAttack.action[playerEid] > 1) {
+    PlayerAttack.action[playerEid] = 0 // consume unknown legacy actions
   }
 }
 
@@ -199,5 +273,10 @@ export function movementSystem(world, delta) {
     Position.x[eid] += Velocity.x[eid] * delta
     Position.y[eid] += Velocity.y[eid] * delta
     Position.z[eid] += Velocity.z[eid] * delta
+    // Dampen knockback impulses on enemies
+    if (Math.abs(Velocity.x[eid]) > 20 || Math.abs(Velocity.z[eid]) > 20) {
+      Velocity.x[eid] *= 0.8
+      Velocity.z[eid] *= 0.8
+    }
   }
 }

@@ -10,7 +10,6 @@ import Login from './Login'
 import Hud from './Hud'
 import WorldMap from './WorldMap'
 import SkillTree from './SkillTree'
-import Toolbar from './Toolbar'
 import Inventory from './Inventory'
 import Merchant from './Merchant'
 import FriendsList from './FriendsList'
@@ -19,6 +18,8 @@ import { useStore } from './store'
 import './index.css'
 import './login.css'
 
+const AUTO_SAVE_INTERVAL_MS = 30_000
+
 export default function App() {
   const characterConfig = useStore(state => state.characterConfig)
   const toggleMap = useStore(state => state.toggleMap)
@@ -26,7 +27,7 @@ export default function App() {
   const toggleInventory = useStore(state => state.toggleInventory)
   const isLoggedIn = useStore(state => state.isLoggedIn)
 
-  // Map M key to open world map
+  // Hotkeys for panels
   useEffect(() => {
     if (!characterConfig) return
     const handleKeyDown = (e) => {
@@ -37,6 +38,27 @@ export default function App() {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [characterConfig, toggleMap, toggleSkillTree, toggleInventory])
+
+  // ── Background auto-save: every 30s + on tab close/hide ──
+  useEffect(() => {
+    if (!characterConfig) return
+    const save = () => useStore.getState().saveCharacter()
+
+    const interval = setInterval(save, AUTO_SAVE_INTERVAL_MS)
+    const onVisibility = () => { if (document.visibilityState === 'hidden') save() }
+    const onBeforeUnload = () => save()
+
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    save() // initial checkpoint on entering the world
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      save() // final save when leaving the world
+    }
+  }, [characterConfig?.id])
 
   return (
     <>
@@ -53,25 +75,24 @@ export default function App() {
             <Inventory />
             <Merchant />
             <FriendsList />
-            <Toolbar />
           </>
         )}
       </div>
 
       {isLoggedIn && characterConfig && (
         <Canvas shadows dpr={[1, 1.5]}>
-          <OrthographicCamera 
-            makeDefault 
-            position={[20, 20, 20]} 
+          <OrthographicCamera
+            makeDefault
+            position={[20, 20, 20]}
             zoom={30}
             near={-100}
             far={100}
           />
           <ambientLight intensity={0.5} color="#ffffff" />
-          <directionalLight 
-            castShadow 
-            position={[10, 20, 15]} 
-            intensity={1.2} 
+          <directionalLight
+            castShadow
+            position={[10, 20, 15]}
+            intensity={1.2}
             color="#ffebb3"
             shadow-mapSize={[1024, 1024]}
           >
